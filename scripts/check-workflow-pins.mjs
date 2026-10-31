@@ -11,7 +11,8 @@ import { join, relative } from "node:path";
 const ROOT = process.cwd();
 const SKIP_DIRS = new Set(["node_modules", ".git", "dist", ".turbo", "coverage"]);
 const USES = /^\s*-?\s*uses:\s*["']?([^\s"'#]+)/;
-const FULL_SHA_PIN = /@[0-9a-f]{40}$/;
+// owner/repo[/path]@<40-hex commit SHA>
+const FULL_SHA_PIN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(\/[^@\s]+)?@[0-9a-f]{40}$/;
 const DOCKER_DIGEST_PIN = /^docker:\/\/[^@]+@sha256:[0-9a-f]{64}$/;
 const PULL_REQUEST_TARGET = /(^|[\s[,-])pull_request_target\s*(:|,|\]|$)/;
 
