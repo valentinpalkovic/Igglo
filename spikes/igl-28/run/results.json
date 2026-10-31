@@ -1,0 +1,2876 @@
+{
+  "protocolRevision": "adbe1ec6-8c1a-42b4-8ce5-3d208ccab6fe",
+  "runs": [
+    {
+      "bug": "clean",
+      "enumOrder": "declared",
+      "output": {
+        "enumOrder": "declared",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "viewer"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "clean",
+      "enumOrder": "reversed",
+      "output": {
+        "enumOrder": "reversed",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B1",
+      "enumOrder": "declared",
+      "output": {
+        "enumOrder": "declared",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "viewer"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B1",
+      "enumOrder": "reversed",
+      "output": {
+        "enumOrder": "reversed",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B2",
+      "enumOrder": "declared",
+      "output": {
+        "enumOrder": "declared",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "viewer"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B2",
+      "enumOrder": "reversed",
+      "output": {
+        "enumOrder": "reversed",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B3",
+      "enumOrder": "declared",
+      "output": {
+        "enumOrder": "declared",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "viewer"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B3",
+      "enumOrder": "reversed",
+      "output": {
+        "enumOrder": "reversed",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B4",
+      "enumOrder": "declared",
+      "output": {
+        "enumOrder": "declared",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "viewer"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B4",
+      "enumOrder": "reversed",
+      "output": {
+        "enumOrder": "reversed",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B5",
+      "enumOrder": "declared",
+      "output": {
+        "enumOrder": "declared",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "viewer"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B5",
+      "enumOrder": "reversed",
+      "output": {
+        "enumOrder": "reversed",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B6",
+      "enumOrder": "declared",
+      "output": {
+        "enumOrder": "declared",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "viewer"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B6",
+      "enumOrder": "reversed",
+      "output": {
+        "enumOrder": "reversed",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B7",
+      "enumOrder": "declared",
+      "output": {
+        "enumOrder": "declared",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "viewer"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": []
+      }
+    },
+    {
+      "bug": "B7",
+      "enumOrder": "reversed",
+      "output": {
+        "enumOrder": "reversed",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              }
+            ]
+          },
+          {
+            "id": "S2",
+            "tools": [],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              },
+              {
+                "tool": "create_expense",
+                "input": {
+                  "amount_cents": 1,
+                  "currency": "USD",
+                  "note": "x"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S2",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": [
+          {
+            "type": "dead_end",
+            "tool": "create_expense",
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              },
+              {
+                "tool": "create_expense",
+                "input": {
+                  "amount_cents": 1,
+                  "currency": "USD",
+                  "note": "x"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "bug": "B8",
+      "enumOrder": "declared",
+      "output": {
+        "enumOrder": "declared",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "viewer"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "rejected"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": [
+          {
+            "type": "tool_threw",
+            "tool": "get_expense",
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "viewer"
+                }
+              },
+              {
+                "tool": "get_expense",
+                "input": {
+                  "id": "x"
+                }
+              }
+            ],
+            "message": "TypeError: Cannot read unknown expense"
+          }
+        ]
+      }
+    },
+    {
+      "bug": "B8",
+      "enumOrder": "reversed",
+      "output": {
+        "enumOrder": "reversed",
+        "states": [
+          {
+            "id": "S0",
+            "tools": [
+              "sign_in"
+            ],
+            "path": []
+          },
+          {
+            "id": "S1",
+            "tools": [
+              "approve_expense",
+              "create_expense",
+              "delete_expense",
+              "get_expense",
+              "get_total",
+              "list_expenses",
+              "sign_out",
+              "switch_workspace"
+            ],
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              }
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "admin"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "member"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S0",
+            "tool": "sign_in",
+            "input": {
+              "role": "viewer"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "list_expenses",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "get_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "rejected"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "USD",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "create_expense",
+            "input": {
+              "amount_cents": 1,
+              "currency": "EUR",
+              "note": "x"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "approve_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "delete_expense",
+            "input": {
+              "id": "x"
+            },
+            "to": "S1",
+            "outcome": "isError"
+          },
+          {
+            "from": "S1",
+            "tool": "get_total",
+            "input": {},
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "beta"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "switch_workspace",
+            "input": {
+              "workspace": "alpha"
+            },
+            "to": "S1",
+            "outcome": "ok"
+          },
+          {
+            "from": "S1",
+            "tool": "sign_out",
+            "input": {},
+            "to": "S0",
+            "outcome": "ok"
+          }
+        ],
+        "findings": [
+          {
+            "type": "tool_threw",
+            "tool": "get_expense",
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              },
+              {
+                "tool": "get_expense",
+                "input": {
+                  "id": "x"
+                }
+              }
+            ],
+            "message": "TypeError: Cannot read unknown expense"
+          }
+        ]
+      }
+    }
+  ]
+}

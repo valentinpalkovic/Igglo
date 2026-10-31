@@ -1,0 +1,391 @@
+{
+  "protocolRevision": "adbe1ec6-8c1a-42b4-8ce5-3d208ccab6fe",
+  "sources": {
+    "fixture/ledger.mjs": "f3975e26a85a7db304901633d993fc5fa72babfbd9633878488096ade7cfa360",
+    "fram-core/explore.mjs": "2ce105a8382090769a8c7b6aeda73eec80340be444b15775ea2d4b006347918f",
+    "fram-core/inputs.mjs": "3df29868d38682f4e9415d0222452b6a12506821613fd3917d050035898b469d",
+    "fram-core/webmcp.mjs": "c5185d60e623df63cb0d8e2ad184bc6d8684761256b2e5c2e1ed0b3f59bc8054"
+  },
+  "validation": [
+    {
+      "bug": "clean",
+      "enumOrder": "declared",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "clean",
+      "enumOrder": "reversed",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B1",
+      "enumOrder": "declared",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B1",
+      "enumOrder": "reversed",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B2",
+      "enumOrder": "declared",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B2",
+      "enumOrder": "reversed",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B3",
+      "enumOrder": "declared",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B3",
+      "enumOrder": "reversed",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B4",
+      "enumOrder": "declared",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B4",
+      "enumOrder": "reversed",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B5",
+      "enumOrder": "declared",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B5",
+      "enumOrder": "reversed",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B6",
+      "enumOrder": "declared",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B6",
+      "enumOrder": "reversed",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B7",
+      "enumOrder": "declared",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 0,
+      "replays": []
+    },
+    {
+      "bug": "B7",
+      "enumOrder": "reversed",
+      "deterministic": true,
+      "freshLoads": 17,
+      "states": 3,
+      "edges": 13,
+      "findings": 1,
+      "replays": [
+        {
+          "finding": {
+            "type": "dead_end",
+            "tool": "create_expense",
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              },
+              {
+                "tool": "create_expense",
+                "input": {
+                  "amount_cents": 1,
+                  "currency": "USD",
+                  "note": "x"
+                }
+              }
+            ]
+          },
+          "observations": [
+            {
+              "bugs": [],
+              "result": {
+                "content": {
+                  "id": "e1",
+                  "amount_cents": 1,
+                  "currency": "USD",
+                  "note": "x",
+                  "status": "pending"
+                }
+              },
+              "thrown": null,
+              "tools": [
+                "list_expenses",
+                "get_expense",
+                "create_expense",
+                "approve_expense",
+                "delete_expense",
+                "get_total",
+                "switch_workspace",
+                "sign_out"
+              ],
+              "events": []
+            },
+            {
+              "bugs": [
+                "B7"
+              ],
+              "result": {
+                "content": {
+                  "id": "e1",
+                  "amount_cents": 1,
+                  "currency": "USD",
+                  "note": "x",
+                  "status": "pending"
+                }
+              },
+              "thrown": null,
+              "tools": [],
+              "events": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "bug": "B8",
+      "enumOrder": "declared",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 1,
+      "replays": [
+        {
+          "finding": {
+            "type": "tool_threw",
+            "tool": "get_expense",
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "viewer"
+                }
+              },
+              {
+                "tool": "get_expense",
+                "input": {
+                  "id": "x"
+                }
+              }
+            ],
+            "message": "TypeError: Cannot read unknown expense"
+          },
+          "observations": [
+            {
+              "bugs": [],
+              "result": {
+                "isError": true,
+                "content": {
+                  "code": "NOT_FOUND"
+                }
+              },
+              "thrown": null,
+              "tools": [
+                "list_expenses",
+                "get_expense",
+                "create_expense",
+                "approve_expense",
+                "delete_expense",
+                "get_total",
+                "switch_workspace",
+                "sign_out"
+              ],
+              "events": []
+            },
+            {
+              "bugs": [
+                "B8"
+              ],
+              "result": {
+                "content": {
+                  "ok": true
+                }
+              },
+              "thrown": "TypeError: Cannot read unknown expense",
+              "tools": [
+                "list_expenses",
+                "get_expense",
+                "create_expense",
+                "approve_expense",
+                "delete_expense",
+                "get_total",
+                "switch_workspace",
+                "sign_out"
+              ],
+              "events": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "bug": "B8",
+      "enumOrder": "reversed",
+      "deterministic": true,
+      "freshLoads": 16,
+      "states": 2,
+      "edges": 13,
+      "findings": 1,
+      "replays": [
+        {
+          "finding": {
+            "type": "tool_threw",
+            "tool": "get_expense",
+            "path": [
+              {
+                "tool": "sign_in",
+                "input": {
+                  "role": "admin"
+                }
+              },
+              {
+                "tool": "get_expense",
+                "input": {
+                  "id": "x"
+                }
+              }
+            ],
+            "message": "TypeError: Cannot read unknown expense"
+          },
+          "observations": [
+            {
+              "bugs": [],
+              "result": {
+                "isError": true,
+                "content": {
+                  "code": "NOT_FOUND"
+                }
+              },
+              "thrown": null,
+              "tools": [
+                "list_expenses",
+                "get_expense",
+                "create_expense",
+                "approve_expense",
+                "delete_expense",
+                "get_total",
+                "switch_workspace",
+                "sign_out"
+              ],
+              "events": []
+            },
+            {
+              "bugs": [
+                "B8"
+              ],
+              "result": {
+                "content": {
+                  "ok": true
+                }
+              },
+              "thrown": "TypeError: Cannot read unknown expense",
+              "tools": [
+                "list_expenses",
+                "get_expense",
+                "create_expense",
+                "approve_expense",
+                "delete_expense",
+                "get_total",
+                "switch_workspace",
+                "sign_out"
+              ],
+              "events": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
