@@ -1,0 +1,29 @@
+{
+  "name": "@iglo/webmcp-adapter",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The only code that touches modelContext: injected page shim and Node driver API (ADR-004).",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    "./page": {
+      "types": "./dist/page/index.d.ts",
+      "default": "./dist/page/index.js"
+    },
+    "./driver": {
+      "types": "./dist/driver/index.d.ts",
+      "default": "./dist/driver/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  }
+}
