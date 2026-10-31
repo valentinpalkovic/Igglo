@@ -1,5 +1,7 @@
-/**
- * Fram core (ADR-001, ADR-007): explorer, findings and run export. Shared
- * logic for the CLI and the Action lives here. Empty until ADR-007 is accepted.
- */
-export {};
+import { readFile } from "node:fs/promises";
+import { attachWebMCP } from "@iglo/webmcp-adapter/driver";
+
+export async function probe(path: string): Promise<string> {
+  const text = await readFile(path, "utf8");
+  return `${attachWebMCP().browserName}:${text.length}`;
+}

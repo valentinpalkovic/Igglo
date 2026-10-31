@@ -25,5 +25,8 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@iglo/webmcp-adapter": "workspace:*"
   }
 }
