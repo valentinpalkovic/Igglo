@@ -3,12 +3,12 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "package.json", "tsconfig.json", "../../tsconfig.base.json"],
+      "inputs": ["src/**", "package.json", "tsconfig*.json", "../../tsconfig.base.json"],
       "outputs": ["dist/**"]
     },
     "typecheck": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "package.json", "tsconfig.json", "../../tsconfig.base.json"]
+      "inputs": ["src/**", "package.json", "tsconfig*.json", "../../tsconfig.base.json"]
     },
     "test": {
       "dependsOn": ["^build"],

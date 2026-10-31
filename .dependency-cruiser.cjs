@@ -93,10 +93,11 @@ module.exports = {
     },
     {
       name: "not-to-dev-dependency",
-      comment: "Production code may not import devDependencies.",
+      comment:
+        "Production code may not import devDependencies. Peer dependencies are also listed in devDependencies so they install locally (ADR-001/004), so npm-peer is exempt.",
       severity: "error",
       from: { path: "^packages/[^/]+/src/", pathNot: "\\.(test|spec)\\.[cm]?[jt]s$" },
-      to: { dependencyTypes: ["npm-dev"], dependencyTypesNot: ["type-only"] },
+      to: { dependencyTypes: ["npm-dev"], dependencyTypesNot: ["type-only", "npm-peer"] },
     },
   ],
   options: {

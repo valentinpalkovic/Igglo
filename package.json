@@ -15,11 +15,11 @@
     "format:check": "prettier --check .",
     "depcruise": "depcruise \"packages/*/src\" apps fixtures --config .dependency-cruiser.cjs",
     "workflow-pins": "node scripts/check-workflow-pins.mjs",
-    "check": "pnpm lint && pnpm format:check && pnpm build && pnpm typecheck && pnpm test && pnpm depcruise"
+    "check": "pnpm build && pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm depcruise"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^24.19.2",
+    "@types/node": "catalog:",
     "dependency-cruiser": "^18.7.0",
     "eslint": "^10.14.0",
     "globals": "^17.13.0",
@@ -27,6 +27,6 @@
     "turbo": "2.11.10",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1",
-    "vitest": "^5.0.5"
+    "vitest": "catalog:"
   }
 }

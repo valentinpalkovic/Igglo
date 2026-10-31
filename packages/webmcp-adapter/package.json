@@ -22,8 +22,12 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p src/page/tsconfig.build.json && tsc -p src/driver/tsconfig.build.json",
+    "typecheck": "tsc -p src/page/tsconfig.json --noEmit && tsc -p src/driver/tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
   }
 }
