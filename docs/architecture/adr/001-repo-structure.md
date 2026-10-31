@@ -1,6 +1,6 @@
 # ADR-001: Repo structure
 
-Status: proposed
+Status: accepted (Head of Tech, 2026-10-31, IGL-46)
 Date: 2026-10-31
 Owner: Architekt
 Approver: Head of Tech
