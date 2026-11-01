@@ -99,11 +99,12 @@ export default {
     { when: { role: "member" }, deny: ["approve_expense", "delete_expense"] },
   ],
   observe: { ignore: ["$..created_at"] },                          // volatile output fields
+  evidence: { raw: false, runRetentionDays: 30 },                  // see section 6
   limits: { statesPerContext: 50, callsPerContext: 500, runMinutes: 15, callTimeoutMs: 5000 },
 };
 ```
 
-- Setup steps are tool calls, or a path to a module that exports `async (page) => void` for UI logins. `storageState` files are accepted too. The MVP does not support logins that need secrets: fork PRs get no secrets, and ADR-006 says the Fram workflow passes none. Contexts must use test users of a backend that the start command brings up.
+- Setup steps are tool calls, or a path to a module that exports `async (page) => void` for UI logins. `storageState` files are accepted too. Fram reads a `storageState` file only to create the browser context. It never copies the file or its cookies and tokens into an artifact, the export or the logs; the export records only the file path. The MVP does not support logins that need secrets: fork PRs get no secrets, and ADR-006 says the Fram workflow passes none. Contexts use test users of a backend that the start command brings up, or, for a deployed preview, the test users described in section 7.
 - Without contexts in the config, Fram explores one context named `default` with no setup. This is the CEO note's behaviour, and the job summary says that roles and tenants were not explored.
 - The config is a `.ts` or `.mjs` file loaded with Node 24's built-in type stripping (checked on Node v24.21.0). No loader dependency. Validation lives in `fram-core` (zod), so the CLI and the Action share it.
 
@@ -116,7 +117,11 @@ export default {
 3. **Write, then read.** After every write that does not throw, in the same session and without reloading, Fram runs all read-only tools again. It uses the pool values plus every value from the write's input and output first, so the read hits the touched entity (for example `get_expense("a1")` after `approve_expense("a1")`).
 4. **New states.** If the tool set after a call is new for this context, Fram records the path and queues the state (breadth-first, so the first path found is a shortest one).
 
-**Value pool (real IDs).** Fram walks every JSON output it observes in a context and collects primitive values by property name and JSON type, for example `id: string → ["a1", "a2"]`. Input candidates for a property are the pool values for the same name and type (canonical order, at most 5) plus one value generated from the schema. Generated values follow the schema: every enum value, `minimum` (or `0`), `"x"` for strings, `true` and `false`. The generated value is how unknown-ID bugs such as B8 are still found. The pool is per context, from reads made in that context only. So one context's data never changes another context's inputs, and adding a context does not change existing results.
+**Value pool (real IDs).** Fram walks every JSON output it observes in a context and collects primitive values by property name and JSON type, for example `id: string → ["a1", "a2"]`. Input candidates for a property are the pool values for the same name and type (canonical order, at most 5) plus one value generated from the schema. The generated value is how unknown-ID bugs such as B8 are still found. The pool is per context, from reads made in that context only. So one context's data never changes another context's inputs, and adding a context does not change existing results.
+
+A pooled value only exists in the server state that produced it, and every edge resets that state. So each pool value carries the path of the read that produced it, and Fram uses it only in an edge whose replayed path starts with that path. Values taken from a write's input or output, and from the reads that follow the write, are used only in that same session (step 3) and never enter the pool for later edges. Without this rule, an ID created by a write in one edge would be passed to a tool in the next edge, after the reset deleted it, and a clean app could report `tool-threw`. The acceptance test covers it (requirement 6 in section 10).
+
+**Generated values must satisfy the schema.** Fram generates values only for a supported subset of JSON Schema: `type`, `enum`, `const`, `minimum`/`maximum`, `minLength`/`maxLength`, and `format` `uuid`, `email`, `date`, `date-time` and `uri`. Per property: every enum value; `minimum` (or `0`); `true` and `false`; for strings, a fixed value of the declared format (for example the UUID `00000000-0000-4000-8000-000000000000`), padded to `minLength` and cut to `maxLength`, else `"x"`. A property with any other constraint (`pattern`, `oneOf`, `not`, other formats) gets no generated value. It uses pool values only, and the export counts it under diagnostic `input.unsupported-schema`. A required property with no candidate means the tool is not called in that state, and that is counted too. So Fram never calls a tool with an input its schema rejects, and a tool that rejects invalid input correctly is never reported. This needs no JSON Schema validator dependency; if pilots use unsupported keywords widely, see "Schema coverage" in Evolution.
 
 **Combining inputs.** Each-choice coverage: every candidate value of every property appears in at least one call, and the other properties take their first canonical candidate. This keeps calls linear in the number of candidates instead of multiplying them, and it guarantees that every enum value (for example `currency: "USD"` for B7) is tried.
 
@@ -125,9 +130,18 @@ export default {
 **Determinism.**
 - Clock: `context.clock.install()` at a fixed time from the config (default `2026-01-01T00:00:00Z`), before any page script.
 - Randomness: an init script replaces `Math.random` with a seeded generator and `crypto.randomUUID` with a seeded sequence; the seed is per edge, derived from the run seed and the edge's canonical key. `crypto.getRandomValues` is not replaced (apps use it for security).
-- Network: requests to origins other than the app URL and the origins listed in `app.allowOrigins` are aborted with `context.route`. Aborted requests are counted per origin in the export.
+- Network: see "Network containment" below.
 - Server state: the `reset` hook (a command, or an HTTP request) runs before every edge. Without it, the export says `determinism.serverReset: false`, and the job summary warns that a path may only reproduce after the same earlier calls.
 - Settle: after each call, Fram waits until the network is idle or 500 ms have passed with no tool change, at most `callTimeoutMs`.
+
+**Network containment.** Purpose: repeatable runs, and test runs that never reach real third parties (payments, email, analytics). It is **not** an exfiltration boundary. The app server that `startCommand` runs on the host has unrestricted network access, and the partner's code is trusted as much as the rest of their CI. The wider network question belongs to the threat model ([IGL-49](/IGL/issues/IGL-49)).
+- Allowed origins: the origin of `app.url` plus `app.allowOrigins`. Entries are exact origins (scheme, host and port), parsed with `URL`; wildcards are rejected when the config is validated. The check denies by default: a request is allowed only if its origin equals an allowed origin.
+- HTTP: `context.route` aborts every request to any other origin. Aborted requests are counted per origin in the export.
+- Service workers: every context is created with `serviceWorkers: "block"`, because `context.route` does not see requests that a service worker handles (Playwright docs).
+- WebSockets: `context.routeWebSocket` with the same check. A socket to an allowed origin is connected to the server; any other socket is closed and counted.
+- Redirects: Playwright calls the route handler only for the first URL of a redirect chain, so an allowed origin that redirects elsewhere is not blocked. Fram detects it: every `request` event with `redirectedFrom()` set and an origin outside the allowlist is counted in `determinism.redirectEscapes`, and the summary warns. Following redirects in Fram with `route.fetch` and fulfilling the final response was rejected, because the page would see a different response URL than in production.
+- WebRTC: an init script removes `RTCPeerConnection` and `RTCDataChannel` from the page before app scripts run (they do not exist in workers). This stops ordinary app code, not code that tries to get around it.
+- Fixture tests in `fixtures/ledger/` check each case: a service-worker fetch, a WebSocket and a direct request to a blocked origin are blocked; a cross-origin redirect is detected and counted; WebRTC is unavailable.
 
 **Limits.** `statesPerContext`, `callsPerContext`, `runMinutes` and `callTimeoutMs`, with the defaults above. When a limit is hit, Fram stops that context (or the run) in canonical order and records `{ kind, context, limit, reachedAt }` in `limits.hit`. Any context with a limit hit is **partial**, and the comparison never reports a finding as fixed in a partial context (see 4).
 
@@ -142,7 +156,7 @@ export default {
 | `dead-end` | after a call, the top document has no tools left, and the tool is not listed in `terminalTools` (for example `delete_account`). |
 | `permission-violation` | a tool that a matching `permissions` rule denies returns something that is not a denial. A denial is: the call threw, or the result parses as JSON with `isError: true`. A team can replace that rule with `isDenied` in the config. |
 
-**Changes** (kind `change`; not findings, they do not count for G3, and by default they never fail the job): `output-changed` is reported when a read returns a different normalized output than the base run for the same context, path, call and input. They are shown as "behaviour changed: check that this is intended". A change exists only on a PR, so it has no new, open or fixed status.
+**Changes** (kind `change`; not findings, they do not count for G3, and by default they never fail the job): `output-changed` is reported when a read's normalized output has a different hash than in the base run for the same context, path, call and input. The comparison uses hashes only (section 6). If the `observe` settings differ from the base run's, the hashes are not comparable, so Fram computes no changes and the summary says why. They are shown as "behaviour changed: check that this is intended". A change exists only on a PR, so it has no new, open or fixed status.
 
 **Not in the MVP:**
 - **"Declared but never reachable"** needs the static dependency graph (oxc-parser and oxc-resolver) to know what is declared. Fram only sees tools that register while it runs. Building the static side is a separate project with its own open questions (dynamic registration, bundler resolution), and IGL-28 shows the output checks matter more for the goal. Out, with a trigger.
@@ -165,7 +179,7 @@ id = "FRAM-" + base32(sha256(canonicalJSON([idScheme, type, tool, signature])))[
 - `type`: one of the four finding types.
 - `tool`: the tool name, exactly as registered.
 - `signature`:
-  - `tool-threw` and `page-error`: the error name plus the message, normalized. Digits, UUIDs, hex strings of 8 or more characters, quoted strings, and every input value of the call are replaced with placeholders. Stack frames are not used: line numbers and bundle file names change with unrelated edits. A timeout's signature is `timeout`.
+  - `tool-threw` and `page-error`: the error name plus the message, normalized. Digits, UUIDs, hex strings of 8 or more characters, email addresses, URLs, quoted strings, and every input value of the call are replaced with placeholders. Stack frames are not used: line numbers and bundle file names change with unrelated edits. A timeout's signature is `timeout`.
   - `dead-end`: the constant `no-tools`.
   - `permission-violation`: the canonical JSON of the rule's `when` tags. The tool is already in the ID.
 
@@ -181,10 +195,15 @@ Accepted trade-off: two different defects in the same tool with the same normali
 
 ### 5. Baseline on `main` and comparison
 
-- A run on each push to `main` uploads its export as the artifact `fram-run` and its observations as `fram-observations` (artifacts of that workflow run, default retention).
+- A run on each push to `main` uploads its export as the artifact `fram-run` and its observations as `fram-observations`. Retention is set explicitly on every upload (`retention-days`), never left to the repo default (90 days on GitHub unless changed):
+  - `fram-observations`: **14 days**. It is only needed until the next `main` baseline. If a PR's base run has expired, the rules below fall back to "exact base missing" or "no base".
+  - `fram-run`: **30 days** by default. `evidence.runRetentionDays` can set it lower. The docs warn before anyone sets it higher, because the export holds paths and signatures from the app.
+  - Job logs and job summaries follow the repo's log retention, which Fram cannot set. That is one more reason they never contain app data (section 8).
 - A PR run looks up the `main` run for the PR's base commit (`pull_request.base.sha`) through the Actions API (`actions: read`, as in ADR-006). The PR side runs on the merge commit that `actions/checkout` gives for `pull_request`, so the difference between the two runs is exactly the PR.
+- **Which runs count as a baseline.** A fork PR can name its branch `main`, so the branch name alone would let a PR supply its own baseline, turn its new findings into `open` and pass `failOn: new`. Fram accepts a run only if all of these hold: `event == "push"`, `head_branch` is the repo's default branch, `head_repository.id == repository.id`, the same workflow file as the current run, and `conclusion == "success"`.
+- **The baseline is untrusted input.** Before use, the downloaded `fram-run` and `fram-observations` are checked against size limits (the observation caps in section 6, 5 MB for the export) and validated against their JSON Schemas. Any failure counts as "no base", and the summary says why.
 - **Exact base found:** findings are marked `new` (not in the base), `open` (in both) or `fixed` (in the base, not in the PR run, and the context where the base saw it is not partial in the PR run). If it is partial, the status is `not-checked`. Output changes are computed.
-- **Exact base missing** (the `main` run failed, or has not finished): Fram uses the newest earlier `main` run, sets `comparison.exactBase: false`, still marks findings as new, open or fixed against it, and computes **no** output changes, because changes from other merged PRs would show up as noise. The summary says why.
+- **Exact base missing** (the `main` run failed, has not finished, or has expired): Fram may compare with the newest earlier accepted `main` run, but other merges since then are part of the PR checkout and not of that run. So it **does not attribute anything to the PR**: a finding in both runs is `open`, a finding only in the PR run is `unattributed`, and nothing is `fixed`. It sets `comparison.exactBase: false` and computes no output changes. `failOn: new` also fails on `unattributed`, so a new defect is not let through; the summary says the base was not exact and that re-running the job after the base run finishes gives exact statuses. The G3 verifier only uses comparisons with `exactBase: true`.
 - **No base at all** (first run): every finding is `new`, and the summary says it is a first run.
 
 Where baselines live: GitHub artifacts only. No Iglo service (out of scope), no commits to the partner's repo.
@@ -204,19 +223,22 @@ The schema lives in `packages/fram-core/schema/fram-run.v1.json` (JSON Schema 20
   "startedAt": "2026-12-01T10:00:00Z", "endedAt": "2026-12-01T10:07:12Z",
   "fram": { "version": "0.1.0", "idScheme": 1, "configHash": "sha256:…" },
   "webmcp": { "implementation": "iglo-shim", "specRevision": "cg-draft-2026-09-03", "nativeDetected": false },
-  "determinism": { "clock": "2026-01-01T00:00:00Z", "seed": 1, "serverReset": true, "blockedOrigins": { "https://example-analytics.test": 3 } },
+  "determinism": { "clock": "2026-01-01T00:00:00Z", "seed": 1, "serverReset": true,
+                   "blockedOrigins": { "https://example-analytics.test": 3 }, "blockedWebSockets": {}, "redirectEscapes": {} },
+  "evidence": { "raw": false },
   "contexts": [ { "name": "admin@beta", "tags": { "role": "admin", "workspace": "beta" }, "states": 2, "calls": 61, "partial": false } ],
   "limits": { "hit": [] },
   "comparison": { "baseRunId": "gh-…", "baseSha": "…", "exactBase": true },
   "findings": [ {
     "id": "FRAM-7K3Q9X2MBA", "kind": "defect", "type": "tool-threw", "tool": "approve_expense",
-    "message": "TypeError: Cannot approve USD expense", "signature": "TypeError: Cannot approve <str> expense",
-    "status": "new",                      // "new" | "open" | "fixed" | "not-checked"
+    "signature": "TypeError: Cannot approve <str> expense",   // "message" only with evidence.raw
+    "status": "new",                      // "new" | "open" | "fixed" | "not-checked" | "unattributed"
     "contexts": ["admin@beta"],
-    "path": [                             // shortest reproducing path, setup included
-      { "state": { "context": "admin@beta", "tools": ["sign_in"] }, "tool": "sign_in", "input": { "role": "admin" } },
-      { "state": { "context": "admin@beta", "tools": ["approve_expense", "…"] }, "tool": "switch_workspace", "input": { "workspace": "beta" } },
-      { "state": { "context": "admin@beta", "tools": ["approve_expense", "…"] }, "tool": "approve_expense", "input": { "id": "b2" } }
+    "path": [                             // shortest reproducing path; setup only as a reference
+      { "setup": "admin@beta" },
+      { "state": { "context": "admin@beta", "tools": ["approve_expense", "…"] }, "tool": "list_expenses", "input": {} },
+      { "state": { "context": "admin@beta", "tools": ["approve_expense", "…"] }, "tool": "approve_expense",
+        "input": { "id": "b2", "note": { "$pool": ["note", 0] } } }
     ]
   } ],
   "changes": [ { "id": "CHG-…", "kind": "change", "type": "output-changed", "context": "admin@alpha", "path": [ … ],
@@ -225,17 +247,30 @@ The schema lives in `packages/fram-core/schema/fram-run.v1.json` (JSON Schema 20
 }
 ```
 
-Every field the brief lists is there: run ID, repo, PR number, head and base SHA, trigger, start and end time in UTC, Fram version, and findings with ID, type, tool, message and shortest path (state, tool, input per step). Observations (normalized read outputs, needed for the diff) go to the separate `fram-observations` artifact, capped at 64 KB per output and 20 MB per run, so the export stays small and the evidence for G2 and G3 never contains app data beyond the inputs in paths.
+Every field the brief lists is there: run ID, repo, PR number, head and base SHA, trigger, start and end time in UTC, Fram version, and findings with ID, type, tool, message and shortest path (state, tool, input per step). The message is the normalized `signature` by default, and the raw message is opt-in, for the reasons below.
+
+**What app data the evidence holds.** In public repos, any signed-in GitHub user can download a run's artifacts, so the default stores as little app data as the checks need.
+- **Observations** (`fram-observations`): by default one entry per read, `{ key: [context, state, path, call, input], outputHash }`. The diff needs nothing more. Short outputs can still be guessed from their hash, so this reduces exposure; it does not hide the data.
+- **Raw evidence is opt-in:** `evidence.raw: true` adds the full normalized outputs to `fram-observations` (capped at 64 KB per output and 20 MB per run) and the raw error message to each finding (cut to 500 characters). It is off by default. When it is on in a public repo, the job summary warns at the top.
+- **Setup steps** are written into paths only as a reference (`{ "setup": "admin@beta" }`), never with their inputs, so login inputs such as an email and password never reach the export or the summary. Replay looks the steps up in the config. A per-input `sensitive` flag can come later.
+- **Inputs in paths are app data** when they come from the pool, because the pool copies them from outputs. Fram writes a pooled value as-is only if its property name is an ID (`id`, or ending in `Id` or `_id`) and the value does not look like an email. Every other pooled value is written as a reference `{ "$pool": [property, index] }`, which replay resolves by re-running the path's reads after reset (this needs a reset hook; without one, replay says the reference cannot be resolved). Values Fram generated from the schema are its own and are written as-is.
+- **Error messages** go into the export only as the normalized `signature` (section 4), which removes quoted strings, emails, URLs, numbers and input values. Words in the message itself can still be app data; that is the remaining exposure.
+- The rule "test data only" (IGL-27 section 9) is a **policy, not a control**: Fram cannot tell test data from real data. The controls are the defaults above, the retention limits in section 5, and the guardrail for deployed apps in section 7.
 
 ### 7. How the app starts in CI
 
-The same shape as Playwright's `webServer`: `app.startCommand`, `app.url`, `app.timeoutMs` (default 120 s) and `app.reuseExisting` (for local runs). Fram starts the command on the host, waits until `url` answers with a status below 400, and stops the process tree when the run ends (the Action's `post` step, ADR-006). A team that tests a deployed preview sets only `app.url`. The ADR-006 Action inputs `start-command` and `url` map to these fields. All other settings come from the config file (input `config`, default `fram.config.ts`), so the Action and the CLI read the same file.
+The same shape as Playwright's `webServer`: `app.startCommand`, `app.url`, `app.timeoutMs` (default 120 s) and `app.reuseExisting` (for local runs). Fram starts the command on the host, waits until `url` answers with a status below 400, and stops the process tree when the run ends (the Action's `post` step, ADR-006). A team that tests a deployed preview sets only `app.url`. With no secrets, its logins must work from what is in the repo, so for a deployed preview:
+- The test users must be dedicated to Fram, low-privilege apart from the roles under test, and valid only on that preview. Their credentials or session files in the repo are treated as public. The quick start says so.
+- **Guardrail:** if `app.url` is not `localhost` (or `127.0.0.1`) and there is no `reset` hook, Fram calls no write tools unless the config sets `app.dataClass: "test"`. Without it, Fram runs reads only and the summary says why. Permission-matrix exploration calls write tools as roles that should not have them, and a real permission bug would then change shared data.
+
+The ADR-006 Action inputs `start-command` and `url` map to these fields. All other settings come from the config file (input `config`, default `fram.config.ts`), so the Action and the CLI read the same file.
 
 ### 8. Output in GitHub
 
-- **Job summary**, from the export only: counts of new, open and fixed findings and of changes, a table of new findings (ID, type, tool, contexts, a short path), a table of changes, limit hits, and determinism warnings.
+- **Job summary**, from the export only: counts of new, open and fixed findings and of changes, a table of new findings (ID, type, tool, contexts, a short path), a table of changes, limit hits, and determinism warnings. Tool names, signatures and inputs come from the app, so every such string is rendered in a code span, with `|`, backticks and line breaks escaped and a length cap of 200 characters. A page cannot add links, images or table rows to the summary.
+- **Logs:** Fram's stdout and stderr contain progress and the same data as the export (counts, IDs, types, tool names, context names), never tool inputs, tool outputs, raw error messages or page console messages. Page console output is not recorded at all. The CLI's `--debug` flag prints raw data for local runs; the Action has no input for it, and the CLI warns when `--debug` is used with `CI` set.
 - **Artifacts** `fram-run` (the export) and `fram-observations`.
-- **Exit code:** `failOn` in the config: `new` (default) fails the job when there is at least one `new` finding, `any` also on `open`, `none` never. Changes never fail the job in the MVP.
+- **Exit code:** `failOn` in the config: `new` (default) fails the job when there is at least one `new` or `unattributed` finding, `any` also on `open`, `none` never. Changes never fail the job in the MVP.
 - **PR comment: not in the MVP.** It needs `pull-requests: write`, which ADR-006 does not grant and which fork PRs never get. The job summary is one click from the PR's checks.
 
 ### 9. Playwright interop
@@ -259,7 +294,7 @@ Two modes per bug, each in both enum orders:
 | B5 | Read after approve is stale | not found | **change** on `get_expense(a1)` after `approve_expense(a1)` in `admin@alpha` | pool + write-then-read + diff |
 | B6 | Admin approve of USD throws | **found**, `tool-threw`, context `admin@beta` | **found**, new | contexts + pool (`b2`) |
 | B7 | Member/admin USD create removes all tools | **found**, `dead-end` | **found**, new | contexts + every enum value |
-| B8 | Unknown ID makes `get_expense` throw | **found**, `tool-threw` | **found**, new | generated value `"x"` |
+| B8 | Unknown ID makes `get_expense` throw | **found**, `tool-threw` | **found**, new | generated schema value (`"x"`, as Ledger's `id` has no format) |
 | clean | — | 0 findings | 0 findings, 0 changes | — |
 
 Hard requirements of the test, all of which must hold:
@@ -268,6 +303,10 @@ Hard requirements of the test, all of which must hold:
 3. Each finding's representative path, replayed on a fresh load of the same build, reproduces it, and does not reproduce on the clean build (the IGL-28 grading rule).
 4. Running the same build twice gives byte-identical `findings` and `changes`.
 5. Fixed detection: for each found bug, PR mode with the bug build as base and the clean build as head reports that finding as `fixed` (the G3 verifier's check, in miniature).
+6. Transient IDs: the clean build plus a `create_expense` that returns a new ID gives 0 findings. An ID created only in one edge is never used in another edge.
+7. Schema-valid inputs: a variant of `get_expense` that declares `format: "uuid"` and throws on a malformed ID gives 0 findings on the clean build.
+8. Evidence: with `evidence.raw: false`, no setup input, no non-ID pooled value and no raw error message appears in `fram-run`, `fram-observations`, the job summary or stdout (checked by searching for the fixture's seeded names and emails).
+9. Network: the fixture tests listed under "Network containment" in section 1.
 
 Counting the rows above: in baseline mode the design finds 4 of 8 (B1, B6, B7, B8). In PR mode it reports all 8: 4 as findings and 4 as changes. These are predictions for one synthetic fixture with bugs chosen to probe the design. They are not a detection rate.
 
@@ -291,7 +330,8 @@ Revisit when:
 - **Parallel contexts:** median run time on a pilot app is over 10 minutes, and its reset hook isolates contexts (for example a database per context).
 - **Change noise:** on a pilot repo, more than half of the PRs with changes are marked "intended" by the team in two consecutive weeks. Add per-tool opt-out of the diff, or path-level ignore rules from the summary.
 - **Pool misses:** a pilot app's IDs use different property names in outputs and inputs (for example `expenseId` vs `id`), visible as calls that only ever return NOT_FOUND. Add declared aliases.
-- **Logins with secrets:** a pilot cannot provide test users without secrets. Needs a change to ADR-006 and a Security Engineer review.
+- **Schema coverage:** on a pilot app, more than 1 in 5 tool properties are counted under `input.unsupported-schema`. Decide on a JSON Schema validator and a generator for `pattern` (new dependency, so an ADR).
+- **Logins with secrets:** a pilot cannot provide test users without secrets. Needs a change to ADR-006 and a Security Engineer review. The evidence rules of section 6 (setup steps only as references) must already hold when it fires.
 - **ID collisions or churn:** a G3 verification fails because an ID did not reproduce on the pre-fix commit. Find the cause before changing `idScheme`.
 
 ## Consequences
@@ -319,20 +359,24 @@ We give up:
 | A reset hook is slow, so runs exceed the time limit. | Limit hits are reported, and nothing is reported as fixed in a partial context. The quick start recommends an in-memory or snapshot test database. |
 | An app with server state runs without a reset hook: paths do not reproduce alone. | `determinism.serverReset: false` in the export and a warning in the summary. The G3 verifier treats such runs as weaker evidence (Head of Product to decide). |
 | Normalized error messages still contain a varying part, so an ID changes between runs. | Requirement 4 of the acceptance test, unit tests of the normalizer, and the ID-churn trigger. |
-| Exploration on a permission matrix calls write tools as roles that should not have them, and a real permission bug then changes data. | Fram runs only against test data (IGL-27 section 9). Reset before every edge. |
+| Exploration on a permission matrix calls write tools as roles that should not have them, and a real permission bug then changes data. | Test data only (IGL-27 section 9, a policy). Reset before every edge. On a non-local app without a reset hook, no write tools unless `app.dataClass: "test"` (section 7). |
+| Partner app data ends up in artifacts that anyone can download in a public repo. | Hash-only observations, setup references, pooled values as references, signatures instead of messages, raw evidence opt-in with a warning, explicit retention (sections 5 and 6). |
+| A PR supplies its own baseline and hides its new findings. | Baseline runs filtered by event, default branch, same repository, workflow and success; baseline files validated (section 5). |
 | The shim differs from native WebMCP (ADR-004). | Unchanged from ADR-004: `webmcp.specRevision` and `nativeDetected` in every export. |
 
 ## Cost impact
 
-No new services. Runtime dependencies of `fram-core`: `playwright-core` (ADR-004) and `zod`, which ADR-004 already plans for the driver's validation of page data; `fram-core` uses the same version for config and export validation. Runs use the partner's GitHub Actions minutes: about one full run per PR plus one per push to `main`. Artifacts use the partner's artifact storage (GitHub Free has 500 MB for private repos, ADR-006); the 20 MB cap on observations keeps one run well below that, and retention follows the repo's setting.
+No new services. Runtime dependencies of `fram-core`: `playwright-core` (ADR-004) and `zod`, which ADR-004 already plans for the driver's validation of page data; `fram-core` uses the same version for config and export validation. Runs use the partner's GitHub Actions minutes: about one full run per PR plus one per push to `main`. Artifacts use the partner's artifact storage (GitHub Free has 500 MB for private repos, ADR-006); hash-only observations are small, the 20 MB cap applies when raw evidence is on, and retention is set explicitly (14 days for observations, 30 for the export, section 5).
 
 ## Security review
 
-Required before approval, from the Security Engineer. Reasons:
-- **Auth:** contexts log in as test users. The MVP allows no secrets (consistent with ADR-006), so login must work with test credentials in the partner's repo.
-- **Customer data:** `fram-observations` stores tool outputs from the app. If a partner points Fram at staging with real data, those outputs end up in GitHub artifacts. The rule is test data only (IGL-27 section 9), plus `observe.ignore`, size caps and default retention.
-- **External network access:** the test browser blocks every origin except the app's own and the declared ones.
-- **Partner code:** the config file and setup modules are the partner's own code, run in the partner's own CI, like `playwright.config.ts`. Fram does not run code from the app under test in Node (ADR-004).
+Required before acceptance, from the Security Engineer ([IGL-81](/IGL/issues/IGL-81)). The first review asked for changes S1–S5 ([PR #8 review](https://github.com/valentinpalkovic/Igglo/pull/8#pullrequestreview-5728146214)); this revision addresses them as follows, and a re-review is pending.
+- **Auth (S3):** contexts log in as test users. The MVP allows no secrets (consistent with ADR-006). Setup inputs never reach the export, summary or logs, `storageState` contents are never copied, and test users of a deployed preview are dedicated, low-privilege, limited to that preview and treated as public (sections 1, 6, 7).
+- **Customer data (S1, S2, S3):** "test data only" is a policy, not a control; Fram cannot enforce it. The controls: observations hold only hashes by default; raw outputs and messages are opt-in with a public-repo warning; pooled values other than IDs are written as references; error messages appear only as normalized signatures; logs carry no app data; retention is 14 days for observations and 30 for the export (sections 5, 6, 8).
+- **Baseline integrity (S4):** baseline runs are filtered by event, default branch, same repository, workflow and conclusion, and validated before use (section 5).
+- **External network access (S5):** network containment is for determinism and to keep test runs away from real third parties, not an exfiltration boundary. HTTP and WebSockets are blocked by exact-origin allowlist, service workers are blocked, WebRTC is removed, and cross-origin redirects are detected and reported, not blocked (section 1). The wider question stays in [IGL-49](/IGL/issues/IGL-49).
+- **Summary output (N1):** app strings are escaped in the job summary (section 8). Fram has no LLM, so prompt injection does not apply.
+- **Partner code:** the config file and setup modules are the partner's own code, run in the partner's own CI, like `playwright.config.ts`. Fram does not run code from the app under test in Node (ADR-004). `crypto.getRandomValues` stays unseeded (N4).
 
 ## Diagrams
 

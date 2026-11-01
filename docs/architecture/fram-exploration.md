@@ -20,4 +20,4 @@ flowchart TD
   ns -- no --> q
 ```
 
-The value pool belongs to one context. Finding IDs are computed from (type, tool, signature) only, never from the context, path, input or order (ADR-007, section 4).
+The value pool belongs to one context, and a pooled value is used only in edges whose path starts with the path that produced it; values from a write stay in that session. Finding IDs are computed from (type, tool, signature) only, never from the context, path, input or order (ADR-007, section 4).
