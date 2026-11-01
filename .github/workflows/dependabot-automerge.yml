@@ -36,6 +36,7 @@ jobs:
       - name: Enable auto-merge (squash)
         if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
         env:
+          REQUIRED_CHECK: lint, typecheck, boundaries, test, build
           QUERY: |
             mutation($id: ID!) {
               enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) {
@@ -43,9 +44,16 @@ jobs:
               }
             }
         run: |
+          # Fail closed: if the rules call errors, grep sees no match and the job stops before the mutation.
+          if ! gh api "repos/$GITHUB_REPOSITORY/rules/branches/main" --paginate \
+               --jq '.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context' \
+             | grep -qxF "$REQUIRED_CHECK"; then
+            echo "::error title=Auto-merge not enabled::No active 'main' ruleset requires the check '$REQUIRED_CHECK'. Auto-merge stays off so that a Dependabot PR cannot merge before CI is green. See ADR-006, follow-ups."
+            exit 1
+          fi
           if ! output=$(gh api graphql -f query="$QUERY" -f id="$PR_NODE_ID" 2>&1); then
             echo "$output"
-            echo "::error title=Auto-merge not enabled::GitHub refused to enable auto-merge on $PR_URL. Either 'Allow auto-merge' is off in the repo settings, or the PR is already mergeable because no 'main' ruleset requires the checks 'lint, typecheck, boundaries, test, build'. This job never merges directly. See ADR-006, follow-ups."
+            echo "::error title=Auto-merge not enabled::GitHub refused to enable auto-merge on $PR_URL. Most likely 'Allow auto-merge' is off in the repo settings. This job never merges directly. See ADR-006, follow-ups."
             exit 1
           fi
           echo "$output"
