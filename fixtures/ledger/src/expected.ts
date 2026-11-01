@@ -83,5 +83,5 @@ export const REQUIREMENTS = [
   "10. B6 build as base: head B6 with variant hide-b2 reports B6 not-checked (call-not-made); clean head without context admin@beta reports B6 not-checked (context-missing); never fixed",
   "11. throw-denial variant: clean build gives 0 findings, with the default denial rule and with isDenied accepting only ForbiddenError",
   "12. baseline bootstrap: a main run of the B6 build exits 0, and the next PR run with it as base reports B6 open, not new",
-  "13. changed check or login, never fixed: B1 base and head with an isDenied that accepts everything gives B1 not-checked (check-removed); B6 base and head with the admin@beta setup module signing in as a viewer at the same path gives B6 not-checked (call-not-made)",
+  "13. changed check or login, never fixed: B1 base and head with an isDenied that accepts everything gives B1 not-checked (check-removed); B6 base and head with the admin@beta setup module signing in as a viewer at the same path gives B6 not-checked (call-not-made); B6 base and head with a head config that only adds an admin deny rule for approve_expense gives B6 not-checked (check-removed)",
 ] as const;
