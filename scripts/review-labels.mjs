@@ -62,21 +62,43 @@ function dependenciesOf(pkg) {
 }
 
 /**
- * Third-party dependency names added in head that no package.json in base
- * depends on. Version bumps of existing dependencies and workspace packages
- * (`workspace:` specs) are not new.
+ * The external package a dependency entry installs, or undefined for a
+ * workspace package. The manifest key is only a local name: `"util":
+ * "npm:lodash@4"` installs lodash, so aliases resolve to their target.
+ * Git, URL and file specs install whatever they point to, so the whole spec
+ * is the identity and any change to it counts as a new package.
+ * @param {string} name @param {string} spec @returns {string | undefined}
+ */
+export function packageIdentity(name, spec) {
+  if (spec.startsWith("workspace:")) return undefined;
+  const alias = /^npm:((?:@[^/@]+\/)?[^@]+)/.exec(spec);
+  if (alias) return alias[1];
+  if (
+    /^(git[+:]|github:|gitlab:|bitbucket:|https?:|file:|link:|portal:)/.test(spec) ||
+    spec.includes("/")
+  ) {
+    return `${name}@${spec}`;
+  }
+  return name;
+}
+
+/** @param {PackageJson | undefined} pkg @returns {string[]} */
+function externalPackagesOf(pkg) {
+  return [...dependenciesOf(pkg)]
+    .map(([name, spec]) => packageIdentity(name, spec))
+    .filter((identity) => identity !== undefined);
+}
+
+/**
+ * External packages in head that no package.json in base installs.
+ * Version bumps of existing packages and workspace packages are not new.
  * @param {Change} change
  */
 export function newDependencies({ basePackages, headPackages }) {
-  const known = new Set(
-    [...basePackages.values()].flatMap((pkg) => [...dependenciesOf(pkg).keys()]),
+  const known = new Set([...basePackages.values()].flatMap(externalPackagesOf));
+  const added = new Set(
+    [...headPackages.values()].flatMap(externalPackagesOf).filter((id) => !known.has(id)),
   );
-  const added = new Set();
-  for (const pkg of headPackages.values()) {
-    for (const [name, spec] of dependenciesOf(pkg)) {
-      if (!known.has(name) && !spec.startsWith("workspace:")) added.add(name);
-    }
-  }
   return [...added].sort();
 }
 

@@ -110,6 +110,36 @@ describe("labelsFor", () => {
     assert.deepEqual(labelsFor(change(["packages/fram-cli/package.json"], base, head)), []);
   });
 
+  it("flags an npm alias that now points to a different package", () => {
+    const base = { "package.json": { dependencies: { util: "npm:lodash@4" } } };
+    const head = { "package.json": { dependencies: { util: "npm:lodash-es@4" } } };
+    const c = change(["package.json"], base, head);
+    assert.deepEqual(newDependencies(c), ["lodash-es"]);
+    assert.deepEqual(labelsFor(c), [SECURITY]);
+  });
+
+  it("does not flag a version bump of an npm alias or a scoped alias", () => {
+    const base = {
+      "package.json": { dependencies: { a: "npm:lodash@4.0.0", b: "npm:@scope/x@1" } },
+    };
+    const head = {
+      "package.json": { dependencies: { a: "npm:lodash@4.1.0", b: "npm:@scope/x@2" } },
+    };
+    assert.deepEqual(labelsFor(change(["package.json"], base, head)), []);
+  });
+
+  it("flags a changed git or URL source", () => {
+    const base = { "package.json": { dependencies: { x: "github:owner/x#v1" } } };
+    const head = { "package.json": { dependencies: { x: "github:attacker/x#v1" } } };
+    assert.deepEqual(labelsFor(change(["package.json"], base, head)), [SECURITY]);
+  });
+
+  it("flags an external package whose name was only a workspace package before", () => {
+    const base = { "package.json": { dependencies: { "@iglo/fram-core": "workspace:*" } } };
+    const head = { "package.json": { dependencies: { "@iglo/fram-core": "^1.0.0" } } };
+    assert.deepEqual(newDependencies(change(["package.json"], base, head)), ["@iglo/fram-core"]);
+  });
+
   it("routes a changed package entry point or workspace dependency to the Architekt", () => {
     const file = "packages/fram-cli/package.json";
     const base = {
