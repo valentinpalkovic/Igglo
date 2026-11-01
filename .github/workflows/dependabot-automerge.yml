@@ -35,13 +35,15 @@ jobs:
 
       - name: Enable auto-merge (squash)
         if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
-        run: |
-          query='mutation($id: ID!) {
-            enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) {
-              pullRequest { number autoMergeRequest { enabledAt mergeMethod } }
+        env:
+          QUERY: |
+            mutation($id: ID!) {
+              enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) {
+                pullRequest { number autoMergeRequest { enabledAt mergeMethod } }
+              }
             }
-          }'
-          if ! output=$(gh api graphql -f query="$query" -f id="$PR_NODE_ID" 2>&1); then
+        run: |
+          if ! output=$(gh api graphql -f query="$QUERY" -f id="$PR_NODE_ID" 2>&1); then
             echo "$output"
             echo "::error title=Auto-merge not enabled::GitHub refused to enable auto-merge on $PR_URL. Either 'Allow auto-merge' is off in the repo settings, or the PR is already mergeable because no 'main' ruleset requires the checks 'lint, typecheck, boundaries, test, build'. This job never merges directly. See ADR-006, follow-ups."
             exit 1
@@ -53,7 +55,7 @@ jobs:
         env:
           MARKER: "<!-- dependabot-automerge:manual-review -->"
         run: |
-          already_commented=$(gh pr view "$PR_URL" --json comments --jq '[.comments[].body | contains($ENV.MARKER)] | any')
+          already_commented=$(gh pr view "$PR_URL" --json comments --jq 'any(.comments[].body; contains("dependabot-automerge:manual-review"))')
           if [ "$already_commented" = "true" ]; then
             echo "Manual-review comment already present."
             exit 0
