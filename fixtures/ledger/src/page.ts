@@ -5,11 +5,11 @@
  * `modelContext` directly, as real apps do.
  *
  * Query parameters: `bug=B1`…`B8`, `enumOrder=declared|reversed`,
- * `variant=default|uuid`. Unknown values fail loudly, so a typo cannot turn a
+ * `variant=default|uuid|hide-b2|throw-denial`. Unknown values fail loudly, so a typo cannot turn a
  * bug build into a clean build, and a repeated key fails too, so a URL cannot
  * select two builds at once.
  */
-import { isBug, startLedger, type LedgerOptions, type ToolHost } from "./ledger.js";
+import { isBug, isVariant, startLedger, type LedgerOptions, type ToolHost } from "./ledger.js";
 
 export function optionsFromQuery(query: string): LedgerOptions {
   const params = new URLSearchParams(query);
@@ -31,9 +31,7 @@ export function optionsFromQuery(query: string): LedgerOptions {
   }
   const variant = params.get("variant");
   if (variant !== null) {
-    if (variant !== "default" && variant !== "uuid") {
-      throw new TypeError(`Unknown variant "${variant}"`);
-    }
+    if (!isVariant(variant)) throw new TypeError(`Unknown variant "${variant}"`);
     options.variant = variant;
   }
   return options;

@@ -4,7 +4,7 @@ Ledger is the expense app from the IGL-28 spike ([result](/IGL/issues/IGL-28#doc
 
 `src/ledger.test.ts` checks every statement here (`pnpm --filter @iglo/fixture-ledger test`).
 
-**Builds.** The page (`index.html`) reads its build from the query: `bug=B1`…`B8` (at most one), `enumOrder=declared|reversed`, `variant=default|uuid`. An unknown value throws, so a typo cannot load the clean build. Tools are registered on `document.modelContext`, which Fram provides through the adapter (ADR-004).
+**Builds.** The page (`index.html`) reads its build from the query: `bug=B1`…`B8` (at most one), `enumOrder=declared|reversed`, `variant=default|uuid|hide-b2|throw-denial`. An unknown value throws, so a typo cannot load the clean build. Tools are registered on `document.modelContext`, which Fram provides through the adapter (ADR-004).
 
 Each table cell starts from a fresh load, signs in as its role, and selects its workspace.
 All successful results are `{ content: value }`. Errors are exactly
@@ -73,6 +73,20 @@ reads, tenant boundaries, and error channels. It imports no spike or run harness
 `id: { type: "string", format: "uuid" }` and **throws** on a malformed ID. A Fram that
 generates an input its schema rejects (for example `"x"`) reports a false `tool-threw`
 here. A well-formed unknown UUID returns NOT_FOUND.
+
+## hide-b2 variant (acceptance requirement 10a)
+
+`variant=hide-b2` changes only `list_expenses`: it never returns `b2`. The expense still
+exists, and with `bug=B6` an admin approve of `b2` in beta still throws. Fram can no longer
+pool `b2`, so it never calls `approve_expense("b2")`. Compared with a B6 base, B6 must be
+`not-checked` (reason `call-not-made`), never `fixed`.
+
+## throw-denial variant (acceptance requirement 11)
+
+`variant=throw-denial` changes only how denials look: every FORBIDDEN result becomes a
+thrown `ForbiddenError` (message `Forbidden`). The clean build is still correct, so Fram
+must report 0 findings: a throw on a call that a permission rule denies is a denial, not
+`tool-threw`. Other errors are unchanged (for example NOT_FOUND stays an `isError` result).
 
 ## Transient IDs (acceptance requirement 6)
 

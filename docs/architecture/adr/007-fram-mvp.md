@@ -1,7 +1,7 @@
 # ADR-007: Fram MVP: exploration, output checks, run export and stable finding IDs
 
-Status: accepted
-Date: 2026-11-01
+Status: accepted, revision 2 (approved by the Head of Tech on IGL-47 before merge)
+Date: 2026-11-01 (revision 1), 2026-11-01 (revision 2: three contract defects from the [PR #8 QA review](https://github.com/valentinpalkovic/Igglo/pull/8), see "Changed in revision 2")
 Owner: Architekt
 Approver: Head of Tech
 Issue: [IGL-47](/IGL/issues/IGL-47) (part of [IGL-40](/IGL/issues/IGL-40))
@@ -156,6 +156,17 @@ A pooled value only exists in the server state that produced it, and every edge 
 | `dead-end` | after a call, the top document has no tools left, and the tool is not listed in `terminalTools` (for example `delete_account`). |
 | `permission-violation` | a tool that a matching `permissions` rule denies returns something that is not a denial. A denial is: the call threw, or the result parses as JSON with `isError: true`. A team can replace that rule with `isDenied` in the config. |
 
+**Calls that a permission rule denies.** A call is *denied by config* when a `permissions` rule whose `when` tags match the context lists the tool. For these calls the permission check decides, and `tool-threw` does not fire for a denial. In this order:
+
+| Outcome of a call that is denied by config | Result |
+| --- | --- |
+| `timeout` | `tool-threw`, signature `timeout`. A timeout is never a denial. |
+| A denial (the default rule above, or `isDenied` if the config sets it) | Nothing. This is the expected outcome, whether the app returns `isError` or throws, for example `ForbiddenError`. |
+| The call threw something that `isDenied` does not accept (only possible when `isDenied` is set) | `tool-threw`, as for any other call. |
+| A result that is not a denial | `permission-violation`. |
+
+A `pageerror` during the call or its settle time is a `page-error` in every case: an uncaught exception is not the tool's answer. Calls that no rule denies are judged by the table above this one, unchanged. With the default rule, any throw counts as a denial, so an unrelated exception in a denied call is not reported; a team that wants to see those sets `isDenied`, for example to accept only errors named `ForbiddenError`. Acceptance requirement 11 covers both.
+
 **Changes** (kind `change`; not findings, they do not count for G3, and by default they never fail the job): `output-changed` is reported when a read's normalized output has a different hash than in the base run for the same context, path, call and input. The comparison uses hashes only (section 6). If the `observe` settings differ from the base run's, the hashes are not comparable, so Fram computes no changes and the summary says why. They are shown as "behaviour changed: check that this is intended". A change exists only on a PR, so it has no new, open or fixed status.
 
 **Not in the MVP:**
@@ -183,7 +194,7 @@ id = "FRAM-" + base32(sha256(canonicalJSON([idScheme, type, tool, signature])))[
   - `dead-end`: the constant `no-tools`.
   - `permission-violation`: the canonical JSON of the rule's `when` tags. The tool is already in the ID.
 
-Not in the ID: the context, the path, the input, the order of anything, the run, the commit and the Fram version. Contexts, paths and inputs where the finding occurred are listed inside the finding. The representative path is the shortest one, and among equal lengths the first in canonical order.
+Not in the ID: the context, the path, the input, the order of anything, the run, the commit and the Fram version. Contexts, paths and inputs where the finding occurred are listed inside the finding, and so are its occurrence keys (section 5). The representative path is the shortest one, and among equal lengths the first in canonical order.
 
 **The ID stays the same** when the app is re-run unchanged, when only the order of enum values, properties or tools changes, when unrelated code changes, when the defect appears in more or fewer contexts or with other inputs, and when contexts are added or renamed.
 
@@ -200,11 +211,18 @@ Accepted trade-off: two different defects in the same tool with the same normali
   - `fram-run`: **30 days** by default. `evidence.runRetentionDays` can set it lower. The docs warn before anyone sets it higher, because the export holds paths and signatures from the app.
   - Job logs and job summaries follow the repo's log retention, which Fram cannot set. That is one more reason they never contain app data (section 8).
 - A PR run looks up the `main` run for the PR's base commit (`pull_request.base.sha`) through the Actions API (`actions: read`, as in ADR-006). The PR side runs on the merge commit that `actions/checkout` gives for `pull_request`, so the difference between the two runs is exactly the PR.
+- **A `main` run never fails on findings.** Fram decides that a run is on `push` to the default branch from the GitHub event context only: `GITHUB_EVENT_NAME` is `push` and `GITHUB_REF` is the default branch named in the event payload. No Action input or config field can set it. On `push` to the default branch, `failOn` does not apply: the job succeeds when Fram finishes the run and uploads both artifacts, whatever it found, and fails only when Fram itself fails (invalid config, app did not start, crash, upload failed). Findings on `main` are listed in the job summary. Without this, the first `main` run of an app with any finding would fail under `failOn: new`, the success filter below would reject it, and no later `main` run could become a baseline while the finding stays. PRs would then report existing defects as `new`. So the workflow conclusion of a `main` run means "Fram completed", and the filter below can keep `conclusion == "success"` unchanged.
 - **Which runs count as a baseline.** A fork PR can name its branch `main`, so the branch name alone would let a PR supply its own baseline, turn its new findings into `open` and pass `failOn: new`. Fram accepts a run only if all of these hold: `event == "push"`, `head_branch` is the repo's default branch, `head_repository.id == repository.id`, the same workflow file as the current run, and `conclusion == "success"`.
 - **The baseline is untrusted input.** Before use, the downloaded `fram-run` and `fram-observations` are checked against size limits (the observation caps in section 6, 5 MB for the export) and validated against their JSON Schemas. Any failure counts as "no base", and the summary says why.
-- **Exact base found:** findings are marked `new` (not in the base), `open` (in both) or `fixed` (in the base, not in the PR run, and the context where the base saw it is not partial in the PR run). If it is partial, the status is `not-checked`. Output changes are computed.
+- **Exact base found:** findings are marked `new` (not in the base), `open` (in both), `fixed` or `not-checked` (both below). Output changes are computed.
+- **`fixed` needs proof that the PR run checked it.** A finding being absent from the PR run is not enough: a PR can stop Fram from reaching the call that showed it (for example, `list_expenses` stops returning `b2`, so `approve_expense("b2")` is never called, and B6 stays in the code). So every finding lists its **occurrences**, one per call that showed it: `{ context, key }`, where `key` is the hash of the canonical `[context identity, state, path, call, input]`, with input values resolved (hash only, like observations in section 6). There are at most 100 occurrences per finding, kept in canonical order; if a finding has more, the list is cut and the finding sets `occurrencesTruncated: true`.
+  **Context identity** is the hash of the context's name, its tags, its setup steps as written in the config (tool names, input literals, environment variable names), and the SHA-256 of the contents of every file the setup loads: the `storageState` file, and the setup module with every local file it imports (relative imports, followed transitively). So a changed login is a different context, even when the file path stays the same: if a PR edits `sessions/test.json` from an admin to a viewer session, every key of that context changes, and its base occurrences become `call-not-made`, never `fixed`. File contents are only folded into the identity. Fram never writes the identity, a file hash or any session cookie or token on its own to the export, the summary or the logs; the identity is an input to occurrence keys and nothing else. Not covered: a changed value of an environment variable, and packages a setup module imports from `node_modules`. A team that swaps the test user behind an unchanged variable name gets no warning.
+  A base finding that is absent from the PR run is:
+  - `fixed` if the PR run executed **every** base occurrence key, none of these calls showed the finding, no context of those occurrences is partial, and the base's occurrence list is not cut (`occurrencesTruncated` is false), and the check that produced the finding still applies: for `permission-violation`, a rule with the same `when` tags still denies the tool, and the effective denial rule is unchanged (both runs use the default rule, or both use an `isDenied` with the same `denialRule` hash, section 6); for `dead-end`, the tool is not in `terminalTools`.
+  - otherwise `not-checked`, with a reason per occurrence: `context-missing`, `context-partial`, `call-not-made` (the state, path or input was not reached, or the context's identity changed), `occurrences-truncated` or `check-removed` (a widened `isDenied`, for example `() => true`, is `check-removed` for every `permission-violation`).
+  The PR run decides this itself: it compares the base's occurrence keys with the keys of the calls it made. The G3 verifier counts only `fixed`. Acceptance requirements 5, 10 and 13 cover both directions.
 - **Exact base missing** (the `main` run failed, has not finished, or has expired): Fram may compare with the newest earlier accepted `main` run, but other merges since then are part of the PR checkout and not of that run. So it **does not attribute anything to the PR**: a finding in both runs is `open`, a finding only in the PR run is `unattributed`, and nothing is `fixed`. It sets `comparison.exactBase: false` and computes no output changes. `failOn: new` also fails on `unattributed`, so a new defect is not let through; the summary says the base was not exact and that re-running the job after the base run finishes gives exact statuses. The G3 verifier only uses comparisons with `exactBase: true`.
-- **No base at all** (first run): every finding is `new`, and the summary says it is a first run.
+- **No base at all** (first run): every finding is `new`, and the summary says it is a first run. On a PR this can fail the job under `failOn: new`; the next PR after the first `main` run has a base.
 
 Where baselines live: GitHub artifacts only. No Iglo service (out of scope), no commits to the partner's repo.
 
@@ -221,7 +239,7 @@ The schema lives in `packages/fram-core/schema/fram-run.v1.json` (JSON Schema 20
   "trigger": "pull_request",              // "pull_request" | "push_main" | "manual"
   "headSha": "…", "baseSha": "…", "mergeSha": "…",
   "startedAt": "2026-12-01T10:00:00Z", "endedAt": "2026-12-01T10:07:12Z",
-  "fram": { "version": "0.1.0", "idScheme": 1, "configHash": "sha256:…" },
+  "fram": { "version": "0.1.0", "idScheme": 1, "configHash": "sha256:…", "denialRule": "default" },   // or "sha256:…" of the isDenied source
   "webmcp": { "implementation": "iglo-shim", "specRevision": "cg-draft-2026-09-03", "nativeDetected": false },
   "determinism": { "clock": "2026-01-01T00:00:00Z", "seed": 1, "serverReset": true,
                    "blockedOrigins": { "https://example-analytics.test": 3 }, "blockedWebSockets": {}, "redirectEscapes": {} },
@@ -234,6 +252,9 @@ The schema lives in `packages/fram-core/schema/fram-run.v1.json` (JSON Schema 20
     "signature": "TypeError: Cannot approve <str> expense",   // "message" only with evidence.raw
     "status": "new",                      // "new" | "open" | "fixed" | "not-checked" | "unattributed"
     "contexts": ["admin@beta"],
+    "occurrences": [ { "context": "admin@beta", "key": "sha256:…" } ],   // section 5; key matches ^sha256:[0-9a-f]{64}$, at most 100
+    "occurrencesTruncated": false,
+    // with status "not-checked": "notChecked": [ { "key": "sha256:…", "reason": "call-not-made" } ]
     "path": [                             // shortest reproducing path; setup only as a reference
       { "setup": "admin@beta" },
       { "state": { "context": "admin@beta", "tools": ["approve_expense", "…"] }, "tool": "list_expenses", "input": {} },
@@ -270,7 +291,7 @@ The ADR-006 Action inputs `start-command` and `url` map to these fields. All oth
 - **Job summary**, from the export only: counts of new, open and fixed findings and of changes, a table of new findings (ID, type, tool, contexts, a short path), a table of changes, limit hits, and determinism warnings. Tool names, signatures and inputs come from the app, so every such string is rendered in a code span, with `|`, backticks and line breaks escaped and a length cap of 200 characters. A page cannot add links, images or table rows to the summary.
 - **Logs:** Fram's stdout and stderr contain progress and the same data as the export (counts, IDs, types, tool names, context names), never tool inputs, tool outputs, raw error messages or page console messages. Page console output is not recorded at all. The CLI's `--debug` flag prints raw data for local runs; the Action has no input for it, and the CLI warns when `--debug` is used with `CI` set.
 - **Artifacts** `fram-run` (the export) and `fram-observations`.
-- **Exit code:** `failOn` in the config: `new` (default) fails the job when there is at least one `new` or `unattributed` finding, `any` also on `open`, `none` never. Changes never fail the job in the MVP.
+- **Exit code:** `failOn` in the config applies to `pull_request` and `manual` runs: `new` (default) fails the job when there is at least one `new` or `unattributed` finding, `any` also on `open`, `none` never. A run on `push` to the default branch ignores `failOn` (section 5). Changes never fail the job in the MVP.
 - **PR comment: not in the MVP.** It needs `pull-requests: write`, which ADR-006 does not grant and which fork PRs never get. The job summary is one click from the PR's checks.
 
 ### 9. Playwright interop
@@ -307,6 +328,10 @@ Hard requirements of the test, all of which must hold:
 7. Schema-valid inputs: a variant of `get_expense` that declares `format: "uuid"` and throws on a malformed ID gives 0 findings on the clean build.
 8. Evidence: with `evidence.raw: false`, no setup input, no non-ID pooled value and no raw error message appears in `fram-run`, `fram-observations`, the job summary or stdout (checked by searching for the fixture's seeded names and emails).
 9. Network: the fixture tests listed under "Network containment" in section 1.
+10. No credit without coverage: with the B6 build as base, (a) a head of the B6 build with `variant=hide-b2` (`list_expenses` no longer returns `b2`) reports B6 as `not-checked`, reason `call-not-made`, never `fixed`; (b) the clean build as head with a config that drops `admin@beta` reports B6 as `not-checked`, reason `context-missing`.
+11. Denials: with `variant=throw-denial` (every denial throws `ForbiddenError` instead of returning `isError`), the clean build gives 0 findings. With `isDenied` set to accept only `ForbiddenError`, the same build still gives 0 findings.
+12. Baseline bootstrap: a `main` run of the B6 build succeeds (exit code 0) although it has a finding, and a following PR run with that run as base reports B6 as `open`, not `new`.
+13. Changed check or login, never `fixed`: (a) with the B1 build as base and head, a head config whose `isDenied` accepts every result reports B1 as `not-checked`, reason `check-removed`; (b) with the B6 build as base and head, a head whose `admin@beta` setup module, at the same path, signs in as a viewer reports B6 as `not-checked`, reason `call-not-made`.
 
 Counting the rows above: in baseline mode the design finds 4 of 8 (B1, B6, B7, B8). In PR mode it reports all 8: 4 as findings and 4 as changes. These are predictions for one synthetic fixture with bugs chosen to probe the design. They are not a detection rate.
 
@@ -361,7 +386,8 @@ We give up:
 | Normalized error messages still contain a varying part, so an ID changes between runs. | Requirement 4 of the acceptance test, unit tests of the normalizer, and the ID-churn trigger. |
 | Exploration on a permission matrix calls write tools as roles that should not have them, and a real permission bug then changes data. | Test data only (IGL-27 section 9, a policy). Reset before every edge. On a non-local app without a reset hook, no write tools unless `app.dataClass: "test"` (section 7). |
 | Partner app data ends up in artifacts that anyone can download in a public repo. | Hash-only observations, setup references, pooled values as references, signatures instead of messages, raw evidence opt-in with a warning, explicit retention (sections 5 and 6). |
-| A PR supplies its own baseline and hides its new findings. | Baseline runs filtered by event, default branch, same repository, workflow and success; baseline files validated (section 5). |
+| A PR supplies its own baseline and hides its new findings. | Baseline runs filtered by event, default branch, same repository, workflow and success; baseline files validated (section 5). Revision 2 does not change the filter: `main` runs succeed whenever Fram completes, so `success` still means a complete baseline. |
+| A PR stops Fram from reaching a defect, and it is credited as fixed. | `fixed` needs every base occurrence re-executed; otherwise `not-checked` (section 5, requirement 10). |
 | The shim differs from native WebMCP (ADR-004). | Unchanged from ADR-004: `webmcp.specRevision` and `nativeDetected` in every export. |
 
 ## Cost impact
@@ -373,10 +399,28 @@ No new services. Runtime dependencies of `fram-core`: `playwright-core` (ADR-004
 Required before acceptance, from the Security Engineer ([IGL-81](/IGL/issues/IGL-81)). The first review asked for changes S1–S5 ([PR #8 review](https://github.com/valentinpalkovic/Igglo/pull/8#pullrequestreview-5728146214)); this revision addresses them as follows. The re-review ([IGL-90](/IGL/issues/IGL-90), [PR #8 re-review](https://github.com/valentinpalkovic/Igglo/pull/8#pullrequestreview-5728240406), against `73605ad`) approved them. Its non-blocking recommendations R1–R8 (all low: a DNS-level backstop for redirects via Chromium `--host-resolver-rules`, narrower purpose wording, references for credential-like `*Id` names, observation keys and `changes[].read.input`, a `configHash` mismatch warning, size caps on uncompressed bytes, backtick-safe summary escaping, and a parsed-hostname localhost check) are tracked in [IGL-49](/IGL/issues/IGL-49) and change no decision here.
 - **Auth (S3):** contexts log in as test users. The MVP allows no secrets (consistent with ADR-006). Setup inputs never reach the export, summary or logs, `storageState` contents are never copied, and test users of a deployed preview are dedicated, low-privilege, limited to that preview and treated as public (sections 1, 6, 7).
 - **Customer data (S1, S2, S3):** "test data only" is a policy, not a control; Fram cannot enforce it. The controls: observations hold only hashes by default; raw outputs and messages are opt-in with a public-repo warning; pooled values other than IDs are written as references; error messages appear only as normalized signatures; logs carry no app data; retention is 14 days for observations and 30 for the export (sections 5, 6, 8).
-- **Baseline integrity (S4):** baseline runs are filtered by event, default branch, same repository, workflow and conclusion, and validated before use (section 5).
+- **Baseline integrity (S4):** baseline runs are filtered by event, default branch, same repository, workflow and conclusion, and validated before use (section 5). Revision 2 keeps this filter and changes only what a `main` run's success means: it succeeds whenever Fram completes, findings or not. A fork PR still cannot produce a `push` run on the default branch. The Security Engineer confirmed this in [IGL-129](/IGL/issues/IGL-129) ([PR #18 review](https://github.com/valentinpalkovic/Igglo/pull/18#pullrequestreview-5729477731)). Occurrence keys add no new exposure class (same guess-confirmation as `outputHash`); R9–R13 from that review are applied in this revision, R14 is in IGL-49.
 - **External network access (S5):** network containment is for determinism and to keep test runs away from real third parties, not an exfiltration boundary. HTTP and WebSockets are blocked by exact-origin allowlist, service workers are blocked, WebRTC is removed, and cross-origin redirects are detected and reported, not blocked (section 1). The wider question stays in [IGL-49](/IGL/issues/IGL-49).
 - **Summary output (N1):** app strings are escaped in the job summary (section 8). Fram has no LLM, so prompt injection does not apply.
 - **Partner code:** the config file and setup modules are the partner's own code, run in the partner's own CI, like `playwright.config.ts`. Fram does not run code from the app under test in Node (ADR-004). `crypto.getRandomValues` stays unseeded (N4).
+
+## Changed in revision 2
+
+The [QA review of PR #8](https://github.com/valentinpalkovic/Igglo/pull/8) (2/5, consolidated in [IGL-98](/IGL/issues/IGL-98)) found three contract defects after revision 1 was merged. Revision 1 decided:
+
+- **Baseline:** `failOn` applied to every run, including `main`. Together with the S4 filter (`conclusion == "success"`), an app with any finding on `main` could never get a baseline. Now: `main` runs ignore `failOn` (sections 5 and 8). The S4 filter is unchanged.
+- **Fixed:** a finding absent from the PR run was `fixed` unless its context was partial. A PR that stopped Fram from reaching the call got credit for a fix. Now: `fixed` needs every base occurrence re-executed, otherwise `not-checked` with a reason (section 5). The export gains `occurrences` and `notChecked` (section 6), a minor schema change before `1.0.0` ships.
+- **Denials:** a denied call that threw was both an accepted denial and a `tool-threw` finding, with no precedence. Now: for calls a permission rule denies, the permission check decides, and timeouts and `isDenied` mismatches stay `tool-threw` (section 2).
+
+From the review of revision 2 (Devin on PR #18, and the Security Engineer's R9–R13 in [IGL-129](/IGL/issues/IGL-129)), also in this revision:
+
+- **Context identity** includes the contents of the `storageState` file and the setup module with its local imports, not only their paths. Before, a PR that changed the login behind an unchanged path could earn `fixed` for calls made as another user (section 5).
+- **`fixed` also needs** an unchanged denial rule (`denialRule` in the export) and an occurrence list that was not cut. Occurrences are capped at 100 per finding, so a busy `main` export stays under the 5 MB baseline limit (sections 5 and 6).
+- **Main mode** comes from the GitHub event context only (section 5). Context identity is never written on its own (section 5).
+
+R14 (recommend `isDenied` to apps whose denials throw) belongs in the onboarding docs and is tracked in [IGL-49](/IGL/issues/IGL-49).
+
+Acceptance requirements 10–13 are new (section 10). Nothing else changed: state, inputs, IDs, network containment and evidence rules are as in revision 1.
 
 ## Diagrams
 
