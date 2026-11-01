@@ -1,10 +1,31 @@
 # ADR-008: Airtable access boundary for personal data
 
-Status: accepted (Head of Tech, 2026-11-01)
-Date: 2026-10-31, updated 2026-11-01 (board decision on O1, as-built connections, block policy on the contacts connection)
+Status: accepted, deferred by CEO decision D-2026-11-01-01 (2026-11-01)
+Date: 2026-10-31, updated 2026-11-01 (board decision on O1, as-built connections, block policy on the contacts connection; deferral and current state)
 Owner: Architekt
 Approver: Head of Tech
 Issue: [IGL-55](/IGL/issues/IGL-55), from the [IGL-51 decision](/IGL/issues/IGL-51#document-decision)
+
+## Current state (deferred)
+
+**CEO decision D-2026-11-01-01** (2026-11-01, on [IGL-62](/IGL/issues/IGL-62) at 11:53 UTC and on [IGL-51](/IGL/issues/IGL-51) at 12:05 UTC): every agent has full access to every Airtable base until real customer data is in Airtable. The decision in this ADR is not in force now. It is the plan for the trigger below. Source: [IGL-51 decision document, update 3](/IGL/issues/IGL-51#document-decision).
+
+What is in place now (verified by the Head of Tech with `list-bases`, 2026-11-01 about 12:15 UTC):
+
+- **One connection:** Airtable General `b9cb271e`, installed for the whole company. It reaches Decision log (`appicd9N1MuKLR2rR`), Forecasts (`appTQcnuiYBY7PSgM`), Iglo Labs Führungs-KPIs (`appwKLdDinRAEjkRP`) and Design-partner pipeline (`appwLmvOxuSEuayfv`).
+- **No contacts base.** The CEO deleted the Design-partner contacts base `appRL6tCPR8sLtSCF` (IGL-62). The contacts connection `169a9e32` is archived.
+- **`Contacts` and `Outreach log` stay in the pipeline base, empty** (0 records each, reported by Head of Customers on 2026-11-01). No personal data goes into Airtable until the trigger.
+- **Block policies are disabled, not deleted**, so every agent has every tool on every base. They stay ready to re-enable at the trigger.
+- **The [IGL-63](/IGL/issues/IGL-63) boundary check is paused.** It would fail against the open state on purpose.
+
+**Trigger: the decision in this ADR is applied before the first record is written to `Contacts` or `Outreach log`** (wave 1 is planned for 2026-11-23). Head of Customers flags it on [IGL-51](/IGL/issues/IGL-51) first. Then, before any write:
+
+1. The Head of Tech decides the boundary again, starting from the Decision section below. The contacts base and its connection must be re-created, so this is new work.
+2. Agent-Ops re-enables the block policies and binds them to the current connection IDs (see the first risk).
+3. The Security Engineer runs the IGL-63 check against the restricted design.
+4. A human records the admin facts (Decision step 5).
+
+If the boundary at the trigger differs from the Decision below, it is recorded in a new ADR that supersedes this one.
 
 ## Context
 
@@ -90,7 +111,9 @@ What was weighed:
 | IGL-30 ruling | Narrow exception to the ruling. | Keeps the ruling in full. |
 | Cost | One more connection to run and audit. | Human time for every contact and outreach entry; the Head of Customers cannot run outreach alone. |
 
-### As built (2026-11-01)
+### As built (2026-11-01 morning, no longer exists)
+
+This was the state on the morning of 2026-11-01. It was replaced at about 12:00 UTC by the open state under Current state: the contacts base is deleted and the contacts connection is archived. The table stays as the record of how the decision was first built.
 
 The human did not re-authorize the old connection with fewer bases. They reused it for contacts and created a new one for general work:
 
@@ -100,6 +123,8 @@ The human did not re-authorize the old connection with fewer bases. They reused 
 | Airtable Design Partner Contacts (the old shared connection, renamed and limited) | `169a9e32-76e8-4e84-82e4-41edf380dcaf` | Design-partner contacts (`appRL6tCPR8sLtSCF`) only | Head of Customers, Head of Product (not a boundary, see step 6) | `b63a6dda`, `fd2ea28c`, `793b136f`, plus `6d7dbd39` (Off for every agent except Head of Customers and Head of Product) |
 
 The Head of Tech verified the base scope of both connections with `list-bases` on 2026-11-01 ([IGL-51](/IGL/issues/IGL-51)). The tool policies did not follow the change, and the install list did not limit the contacts connection; see the first and third risks below. Policy state as of 2026-11-01 ([IGL-51](/IGL/issues/IGL-51) decision document, update 2; [IGL-54](/IGL/issues/IGL-54)).
+
+The diagram below shows the restricted design for the trigger, not the current open state.
 
 ```mermaid
 flowchart LR

@@ -1,0 +1,11 @@
+$ vitest run --passWithNoTests
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.5 [39m[90m/paperclip/instances/default/isolated-workspaces/917a1f87-fcbf-4485-b87e-1399db7f1452/1f0ba8dd-c112-47c1-8708-5875c9da7936/repo/packages/fram-core[39m
+
+ [32m✓[39m src/index.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 12[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m   Start at [22m 22:47:44
+[2m   Duration [22m 604ms[2m (import 87%, transform 9%, tests 3%, worker 1%)[22m
+
