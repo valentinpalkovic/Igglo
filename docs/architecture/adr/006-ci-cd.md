@@ -189,6 +189,24 @@ Revisit with the runner comparison (GitHub vs Blacksmith vs Ubicloud, owner Arch
 
 A switch to a paid runner always needs CEO approval.
 
+### Lint and format tools (checked 2026-11-01, [IGL-80](/IGL/issues/IGL-80))
+
+ADR-001 chose ESLint and Prettier. On [IGL-74](/IGL/issues/IGL-74), the CEO suggested oxlint and oxfmt. We keep ESLint and Prettier for now, because switching gains about 3 seconds per run and adds a custom plugin to maintain.
+
+What we checked (oxlint 1.90.0, oxfmt 0.75.0, docs via Context7, run on `main` at `2778c87`):
+
+| Question | Result |
+|---|---|
+| Can oxlint express the ADR-004 `modelContext` rule? | Not with built-in rules: oxlint has no `no-restricted-syntax`. A local JS plugin (`jsPlugins`) with the same three ESLint selectors works. It caught all five access forms in a probe file. The rule would then be about 15 lines of our own plugin code instead of ESLint config. |
+| Type-aware rules (`recommendedTypeChecked`)? | Through `--type-aware` with `oxlint-tsgolint`: 59 of 61 typescript-eslint type-aware rules. JS plugin rules cannot use type information yet. Our ADR-004 rule does not need it. |
+| Time on the repo (local, warm) | ESLint 4.0 s, oxlint with `--type-aware` and the plugin 1.1 s. Prettier 0.6 s, oxfmt 0.1 s. The whole CI job takes 15 s (PR #4). |
+| oxfmt vs Prettier output | Different defaults (`printWidth` 100, `package.json` key order): a switch reformats files and needs a config. |
+
+Revisit (a new ADR that supersedes the ADR-001 lint line) when any of these holds:
+- the CI lint step takes more than 60 s (median over a week of `main` PRs);
+- lint plus format take more than a third of the CI job time for two weeks in a row;
+- ESLint or typescript-eslint drops support for a rule we rely on, or a typescript-eslint release lags a TypeScript release we need by more than a month.
+
 Revisit the Action's shape when:
 - a partner needs Fram on non-GitHub CI (then the CLI on npm, see ADR-001), or on Windows or macOS runners;
 - Chromium install takes more than 25% of median Fram run time (then add a browser cache, or compare with a container action).
