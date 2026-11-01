@@ -1,7 +1,7 @@
 # ADR-008: Airtable access boundary for personal data
 
-Status: proposed (open point O1 waits for the board; the Head of Tech sets the final status)
-Date: 2026-10-31
+Status: accepted (Head of Tech, 2026-11-01)
+Date: 2026-10-31, updated 2026-11-01 (board decision on O1, as-built connections)
 Owner: Architekt
 Approver: Head of Tech
 Issue: [IGL-55](/IGL/issues/IGL-55), from the [IGL-51 decision](/IGL/issues/IGL-51#document-decision)
@@ -23,7 +23,7 @@ Constraints:
 
 So the base is the only hard boundary Airtable gives us, and the OAuth resource list is the only place we can enforce it for agents.
 
-Not known today: which agents hold the Airtable connection, and which bases the current grant covers (probably "all": list-workspaces shows owner, and new bases appeared without a new authorization). Agent-Ops and the human check this (IGL-51, steps 3 and 4).
+When this ADR was written (2026-10-31), the one shared connection reached every base at owner level, and all 20 agents held it with all 55 tools Allowed ([IGL-54](/IGL/issues/IGL-54), inventory).
 
 ## Options
 
@@ -46,7 +46,7 @@ The template weights are changed for this ADR. It is an access decision, not a t
 | Weighted total | | **4.05** | 2.60 | 3.50 |
 
 - Security posture: A puts Contacts out of the token's reach, so a prompt-injected agent cannot read it whatever tool it holds. B still lets every agent on the lower-role connection *read* Contacts, because Airtable cannot hide a table inside a base; the review calls B weaker than A. Do nothing leaves F1 open.
-- Fit with IGL-30: A keeps one shared connection for all normal work. The only possible second connection is the narrow exception in O1, and that is the board's choice. B is a second connection for the general case, which is what the board ruled against. Do nothing fits the ruling exactly.
+- Fit with IGL-30: A keeps one shared connection for all normal work. The only second connection is the narrow exception in O1, which the board chose. B is a second connection for the general case, which is what the board ruled against. Do nothing fits the ruling exactly.
 - Agent fit: in A, agents work with a Teams record ID across two bases, a simple and common pattern. B is the same for agents. Do nothing needs no change.
 - Cost of ownership: A adds a base, a re-authorization, and a manual step for every new base. B adds a second connection to run and maybe a paid seat. Do nothing costs nothing.
 - Data integrity: in A the Team key is plain text, so Airtable does not stop a wrong or orphaned key. B and do nothing keep the linked-record field.
@@ -62,8 +62,8 @@ The table informs the decision; it does not make it. Do nothing scores second on
    - "Design-partner pipeline" (`appwLmvOxuSEuayfv`): Teams, RunWeeks, Findings, FixPRs. No names of people.
    - "Design-partner contacts" (new): Contacts, Outreach log.
    - The link is the Teams record ID, stored as plain text. No linked-record field crosses bases (Airtable cannot do that).
-2. **The shared connection does not reach the contacts base.** A human re-authorizes the shared connection with resource access set to **individual bases only**: Design-partner pipeline, Decision log, Forecasts, and later non-personal bases, added one at a time. Not "all workspaces", not the workspace "Iglo Labs" as a whole, and never the contacts base. A new base is then unreachable until a human adds it. That is the review step we want.
-3. **The shared connection is not used at owner level for normal work (F1).** The board kept one connection, so the resource scope above plus a tool policy per agent replaces a lower-role account. Agent-Ops (owner of connections) sets the policy:
+2. **The general connection does not reach the contacts base.** Its OAuth resource access is set to **individual bases only**: Design-partner pipeline, Decision log, Forecasts, and later non-personal bases, added one at a time. Not "all workspaces", not the workspace "Iglo Labs" as a whole, and never the contacts base. A new base is unreachable until a human adds it. That is the review step we want.
+3. **No connection is used at owner level for normal work (F1).** The board kept one connection for general work, so the resource scope above plus a tool policy per agent replaces a lower-role account. Agent-Ops (owner of connections) sets the policy on **every** Airtable connection:
    - **Off for every agent:** `delete-table`, `delete-automation`, `delete-interface`, `delete-page`, `publish-form`, `publish-interface`, `create-automation`, `update-automation`, `test-automation-webhook-trigger`, `create-base`. Publishing can expose data to the public, and automations can send data out (webhook, email). These are setup actions for a human or a one-off grant.
    - **`delete-records-for-table`:** Ask first, and only for the record owner by role (the delete-by step in IGL-42 F3).
    - **Schema tools** (`create-table`, `create-field`, `update-field`, `update-table`): only for the agent that builds that base, removed when the build is done.
@@ -72,19 +72,32 @@ The table informs the decision; it does not make it. Do nothing scores second on
 4. **Human collaborators** on the contacts base: only the people who need it. No shared view links, no published forms or interfaces, on either base.
 5. **Admin check (F2).** A human with the Airtable admin login records in IGL-51: the plan, the collaborators per workspace and base, every share link, published form and published interface (expected: none), and the bases on the Paperclip OAuth grant.
 
+6. **The contacts base has its own connection (O1-a, see below).** It reaches the contacts base only and is installed for Head of Customers (records read and write) and Head of Product (records read).
+
 Why the boundary is a base and not a tool rule: with one shared connection, any agent that holds a record-read tool can read every table on every base the token reaches. That includes agents that read untrusted partner pages and repos (IGL-41). Tools are not scoped per base, so no tool policy can fix this.
 
-### Open point O1: who reaches the contacts base (board decision)
+### O1: who reaches the contacts base (decided)
 
-Option A leaves one question for the board, asked on [IGL-51](/IGL/issues/IGL-51). The Head of Tech updates this ADR's status when the board answers.
+Option A left one question for the board, asked on [IGL-51](/IGL/issues/IGL-51). **The board picked O1-a, the exception connection, on 2026-11-01.** This is a narrow exception to the IGL-30 ruling: two Airtable connections in total, not one per agent.
 
-| | O1-a: exception connection (recommended by the Head of Tech) | O1-b: humans-only entry |
+What was weighed:
+
+| | O1-a: exception connection (chosen) | O1-b: humans-only entry |
 | --- | --- | --- |
 | What | A second connection, limited to the contacts base only. Granted only to Head of Customers (write) and Head of Product (read). Two connections in total, not one per agent. | No agent touches Contacts. A human types contacts in the Airtable UI. Agents work with Teams record IDs only. |
 | IGL-30 ruling | Narrow exception to the ruling. | Keeps the ruling in full. |
 | Cost | One more connection to run and audit. | Human time for every contact and outreach entry; the Head of Customers cannot run outreach alone. |
 
-Until the board answers, no agent has access to the contacts base. That is the O1-b state, so the safe default holds while we wait.
+### As built (2026-11-01)
+
+The human did not re-authorize the old connection with fewer bases. They reused it for contacts and created a new one for general work:
+
+| Connection | Paperclip ID | Bases it reaches | Installed for |
+| --- | --- | --- | --- |
+| Airtable General (new) | `b9cb271e-5823-449c-9d7c-1b4f07805277` | Design-partner pipeline (`appwLmvOxuSEuayfv`), Decision log, Forecasts | whole company |
+| Airtable Design Partner Contacts (the old shared connection, renamed and limited) | `169a9e32-76e8-4e84-82e4-41edf380dcaf` | Design-partner contacts (`appRL6tCPR8sLtSCF`) only | Head of Customers, Head of Product |
+
+The Head of Tech verified the base scope of both connections with `list-bases` on 2026-11-01 ([IGL-51](/IGL/issues/IGL-51)). The tool policies did not follow the change; see the first risk below.
 
 ```mermaid
 flowchart LR
@@ -92,20 +105,20 @@ flowchart LR
   hoc(["Head of Customers,<br/>Head of Product"])
   human(["Human admin<br/>(owner, setup only)"])
 
-  shared["Shared Airtable connection<br/>OAuth: individual bases only"]
-  exc["Exception connection<br/>contacts base only<br/>(only if the board picks O1-a)"]
+  shared["Airtable General<br/>b9cb271e, whole company<br/>OAuth: individual bases only"]
+  exc["Airtable Design Partner Contacts<br/>169a9e32, contacts base only"]
 
   subgraph ws["Airtable workspace: Iglo Labs"]
     pipe[("Design-partner pipeline<br/>Teams, RunWeeks,<br/>Findings, FixPRs")]
-    contacts[("Design-partner contacts<br/>Contacts, Outreach log")]
+    contacts[("Design-partner contacts<br/>appRL6tCPR8sLtSCF<br/>Contacts, Outreach log")]
     other[("Decision log, Forecasts,<br/>later non-personal bases")]
   end
 
   agents --> shared
   shared --> pipe
   shared --> other
-  hoc -. "O1-a" .-> exc
-  exc -.-> contacts
+  hoc -- "O1-a" --> exc
+  exc --> contacts
   human -- "Airtable UI" --> contacts
   contacts -. "Teams record ID as text" .-> pipe
 ```
@@ -131,26 +144,28 @@ Easier:
 
 Harder:
 - Two bases to keep consistent. The Team key is plain text, so a deleted team can leave orphaned contacts. The weekly delete-by step (IGL-42 F3) must also clean contacts of deleted teams.
-- Every new non-personal base needs a human to re-authorize the shared connection.
+- Every new non-personal base needs a human to add it to the general connection.
+- Two Airtable connections to run and audit, and every tool policy must exist on both.
 - Cross-base lookups take more API calls.
 
 Given up:
 - Linked-record fields, rollups and lookups between Teams and Contacts.
-- Full agent automation of outreach, if the board picks O1-b.
+- One connection for everything (the IGL-30 ruling has one narrow exception now).
 
 ## Risks and mitigations
 
 | Risk | Mitigation |
 | --- | --- |
-| Someone re-authorizes the shared connection with "all workspaces", and the contacts base is reachable again without anyone noticing. | Proposed automated check: the Tuesday Security Check calls `list-bases` on the shared connection and fails if the contacts base, or any base not on the allowed list in `tools-and-data.md`, is reachable. Agent-Ops records the allowed list. (A rule without a check is a wish; this check is a follow-up issue, not part of this ADR.) |
-| Tool policy drifts: a new agent gets the connection with every tool Allowed. | Agent-Ops records which agents hold the connection and their tool grants in `tools-and-data.md`; the Security Engineer checks it before wave 1. |
+| **Tool policies are bound to a connection ID.** When a connection is replaced or a new one is added, the policies stay on the old ID and the new connection comes up with every tool Allowed for every agent. **This happened on 2026-11-01:** the new general connection had all 55 tools Allowed for every agent, including `delete-table`, `publish-form` and `create-base` ([IGL-54](/IGL/issues/IGL-54)). | Agent-Ops re-applies the tool policies after any Airtable connection change. The automated check in [IGL-63](/IGL/issues/IGL-63) asserts that every Airtable connection ID is covered by the Off-list policy. |
+| Someone widens a connection's base list ("all workspaces"), and the contacts base is reachable through the general connection without anyone noticing. | Automated check [IGL-63](/IGL/issues/IGL-63) (Security Engineer), weekly in the Tuesday Security Check and after any Airtable connection change: `list-bases` on the general connection returns exactly the allowed list in `tools-and-data.md`, never the contacts base; `list-bases` on the contacts connection returns only `appRL6tCPR8sLtSCF`. |
+| More agents than Head of Customers and Head of Product can use the contacts connection (install list and grants drift apart). | Same check, IGL-63: no agent outside those two can use the contacts connection. Agent-Ops fixes failures. |
+| Tool policy drifts: a new agent gets a connection with every tool Allowed. | Agent-Ops records which agents hold each connection and their tool grants in `tools-and-data.md`; the IGL-63 check covers the Off-list on every connection. |
 | Orphaned contacts after a team is deleted. | The weekly delete-by step also deletes contacts whose Team key no longer exists. |
 | Personal data leaks into the pipeline base through free text (a name in `Independence note`, `Source`, `Reply`). | IGL-42 rules F4 and condition 7 (no names of people in Teams, RunWeeks, Findings, FixPRs). |
-| The board takes a long time to answer O1. | No agent reaches Contacts in the meantime (O1-b state). The Head of Customers can prepare outreach on Teams records. |
 
 ## Cost impact
 
-No new Airtable seat: the decision avoids a second Airtable account. The new base sits in the existing workspace; that the plan's base limit allows it is not verified here and is part of the F2 admin check. Cost drivers: API calls (cross-base lookups count against the plan limit), and one more connection to run if the board picks O1-a.
+No new Airtable seat: the decision avoids a second Airtable account. The new base sits in the existing workspace; that the plan's base limit allows it is not verified here and is part of the F2 admin check. Cost drivers: API calls (cross-base lookups count against the plan limit), and the second (contacts) connection to run and audit.
 
 ## Security review
 
