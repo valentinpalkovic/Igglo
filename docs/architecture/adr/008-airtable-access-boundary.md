@@ -1,6 +1,6 @@
 # ADR-008: Airtable access boundary for personal data
 
-Status: accepted, revision 3. Takes effect at the wave 1 trigger. Until T5 passes, D-2026-11-01-01 applies to everything outside this decision. Revision 3 is in force when the Head of Tech merges it.
+Status: accepted, revision 3. Takes effect at the wave 1 trigger. Until T5 passes, D-2026-11-01-01 applies to everything outside this decision. Revision 3 is in force when it is merged to `main` after Head of Tech approval on IGL-114.
 Date: 2026-10-31, updated 2026-11-01 (board decision on O1; CEO deferral D-2026-11-01-01; boundary design from IGL-71, revision 4; revision 2 of this ADR: single connection, decided in IGL-71 design revision 5, applied state from revision 6; **revision 3: the boundary covers every derived copy, decided by the Head of Tech on IGL-111**)
 Owner: Architekt
 Approver: Head of Tech
@@ -246,7 +246,7 @@ Added in revision 3. Decided by the Head of Tech on [IGL-111](/IGL/issues/IGL-11
 
 **Decision: the contacts boundary covers every copy of what an agent in P2 or P3 read from the contacts base.** An agent outside the pair must not be able to read contact data in any of them.
 
-**Scope: the agents in P2 and P3,** today Head of Customers and Head of Product. IGL-111 assigned C1 to C3 for Head of Customers. Head of Product reads the contacts base through P3, so their runs produce the same copies, and the same controls apply to them. *(Approval note for IGL-114: this extension to Head of Product is the Architekt's proposal. The Head of Tech confirms or narrows it before merge.)*
+**Scope: the agents in P2 and P3,** today Head of Customers and Head of Product. IGL-111 assigned C1 to C3 for Head of Customers. Head of Product reads the contacts base through P3, so their runs produce the same copies, and the same controls apply to them. *(Extension to Head of Product confirmed by the Head of Tech on IGL-114, 2026-11-01.)*
 
 | Derived copy | What it holds | Controls |
 | --- | --- | --- |
