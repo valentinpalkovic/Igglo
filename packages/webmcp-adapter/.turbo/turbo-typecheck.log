@@ -1,1 +1,0 @@
-$ tsc -p src/page/tsconfig.json --noEmit && tsc -p src/driver/tsconfig.json --noEmit

@@ -1,9 +1,0 @@
-$ vitest run --passWithNoTests
-
-[1m[30m[46m RUN [49m[39m[22m [36mv5.0.5 [39m[90m/paperclip/instances/default/isolated-workspaces/917a1f87-fcbf-4485-b87e-1399db7f1452/1f0ba8dd-c112-47c1-8708-5875c9da7936/repo/packages/webmcp-adapter[39m
-
-No test files found, exiting with code 0
-
-[2minclude: [22m[33m**/*.{test,spec}.?(c|m)[jt]s?(x)[39m
-[2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/.git/**[39m
-
