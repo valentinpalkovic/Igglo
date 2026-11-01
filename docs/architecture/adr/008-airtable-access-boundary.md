@@ -254,33 +254,39 @@ Added in revision 3. Decided by the Head of Tech on [IGL-111](/IGL/issues/IGL-11
 | Run log files on the runner's disk | the same transcript | C1, C4, C5 |
 | Paperclip database backups | whatever the database holds, run events included | C1, C6 |
 | Per-run session homes in `/tmp` | the provider's session transcripts and local memory files | C1 |
+| Persistent execution workspaces and scratch files of the pair | files an agent writes during a run (exports, notes); they outlive the run | C1, C4, C5 |
+| Platform-generated run summaries and session handoffs | a summary of an interrupted or handed-off run, given to the next participant on the issue | C1 |
 | Shared memory (Supermemory today) | facts an agent saves; readable by every agent with access to the same memory space | C2 |
 | Paperclip comments, documents and approval texts | whatever an agent writes; readable by every agent in the company | C3 |
+| Writes outside Paperclip: GitHub (commits, PRs, issues), the pipeline base, and arguments sent to external tools (web search, browser, analytics) | whatever an agent writes or sends; readable by others or kept by a third party | C3 |
 
 The controls. The owners and due dates are those set on IGL-111. The progress is tracked there.
 
 | # | Control | IGL-111 fix | Owner | Needed before |
 | --- | --- | --- | --- | --- |
-| C1 | **Platform isolation.** Run logs and run events are readable through the API only by the run's own agent and the board. An agent run cannot read the run-log files, the database backups or another run's session home. Session homes are removed when the run ends. | (a), (f) | board (instance operator), [IGL-112](/IGL/issues/IGL-112); no agent and no company setting can change this | first contact record |
+| C1 | **Platform isolation.** Run logs and run events are readable through the API only by the run's own agent and the board. An agent run cannot read the run-log files, the database backups, another run's session home, or the pair's execution workspaces. Session homes are removed when the run ends. Platform-generated summaries and handoffs of a pair run go only to an agent in the pair or to the board. | (a), (f) | board (instance operator), [IGL-112](/IGL/issues/IGL-112); no agent and no company setting can change this | first contact record |
 | C2 | **No memory tool for the pair.** No Supermemory grant or install, and no other shared memory tool. | (b) | Agent-Ops, [IGL-113](/IGL/issues/IGL-113) | first contact record |
-| C3 | **Record-ID-only rule.** No contact data (names, e-mail addresses, phone numbers, roles tied to a person, message content) in memory of any kind, comments, documents or approval texts. A contact is named by its Airtable record ID only. Read calls pass `fieldIds`, so only the fields a step needs are read. Written into the agent's instructions, with an eval case. | (c) | Agent-Ops, IGL-113 | first contact record |
-| C4 | **Retention.** A retention period for the pair's run logs and run events. Deleting on a schedule needs one CEO approval. | (d) | Privacy & Compliance, [IGL-110](/IGL/issues/IGL-110) T6 | first erasure request |
-| C5 | **Erasure step.** Find and delete the pair's runs that contain a given contact record ID. Uses the delete capability of IGL-112. | (e) | Security Engineer (procedure, IGL-110 T6); board (platform capability, IGL-112) | first erasure request |
+| C3 | **Record-ID-only rule.** No contact data (names, e-mail addresses, phone numbers, roles tied to a person, message content) in any text the pair writes outside the contacts base: memory of any kind, comments, documents, approval texts, GitHub, the pipeline base, and tool arguments sent to non-Airtable tools (for example web search queries). A contact is named by its Airtable record ID only. Read calls pass `fieldIds`, so only the fields a step needs are read. Written into the agent's instructions, with an eval case. | (c) | Agent-Ops, IGL-113 | first contact record |
+| C4 | **Retention.** A retention period for the pair's run logs, run events and execution workspaces. Deleting on a schedule needs one CEO approval. | (d) | Privacy & Compliance, [IGL-110](/IGL/issues/IGL-110) T6 | first erasure request |
+| C5 | **Erasure step.** Find and delete the pair's runs and workspace files that contain a given contact record ID. Uses the delete capability of IGL-112. | (e) | Security Engineer (procedure, IGL-110 T6); board (platform capability, IGL-112) | first erasure request |
 | C6 | **Backup rotation.** The rotation period of the database backups is recorded in the processor inventory, so erasure has a known end date in backups. | (g) | Privacy & Compliance, IGL-110 T6 | first erasure request |
 
 **Why C1 is a platform fix and not a policy.** Tool policies (section 4) govern tool calls. Run logs, backups and `/tmp` are read through the Paperclip API and the file system, which no tool policy sees. The disk copies can be reached without the API, so an API-only fix is not enough. C1 needs both parts.
 
-**C3 is the only control on comments and documents.** Every agent can read every issue in the company, so C3 depends on the pair following an instruction. A prompt-injected agent in the pair could break it. D4 checks the rule is in place, not that it is never broken. This is accepted as a residual risk (Risks and mitigations).
+**C3 is the only control on comments, documents and writes outside Paperclip.** Every agent can read every issue in the company, so C3 depends on the pair following an instruction. A prompt-injected agent in the pair could break it. D4 checks the rule is in place, not that it is never broken. This is accepted as a residual risk (Risks and mitigations). A detective check (D5, planned) is to follow.
 
 **Fallback.** If C1 is not in place by 2026-11-16, the first contact record waits, or the CEO picks another interim control (for example, a human enters the personal fields directly in the Airtable UI and no agent run ever reads them). The trigger does not proceed without one of the two.
 
 **Checks.** D1 to D4 are part of "boundary holds" ([Definition](#definition-boundary-holds)). D1 and D2 are the Security Engineer's IGL-111 re-test made permanent.
+
+**Planned: D5, a scan for C3.** A weekly scan of the pair's comments, documents and approval texts for e-mail and phone patterns. It reports issue and comment IDs only, never the matched text. Owner: Security Engineer, as a follow-up task after this revision merges. It joins "boundary holds" in a later revision.
 
 **Re-open this section** when any of these happens:
 
 - **An agent is added to P2 or P3.** Its runs then produce derived copies, and C1 to C3 must cover it before its first call on the contacts base.
 - **A new memory or logging tool** is added for any agent: a memory connection, a transcript or tracing export, an observability sink, a new log store. Each is a new place a copy can land.
 - **A Paperclip upgrade changes run authorization** (who can read runs, logs or events), where runs store data, or how session homes are created and removed. D1 and D2 run after every upgrade; a failure is the signal.
+- **The adapter or model provider changes for an agent in P2 or P3.** A new provider CLI stores transcripts and memory in new places.
 
 ### O1: who reaches the contacts base (decided)
 
@@ -354,12 +360,12 @@ The exact IDs each probe uses are in the IGL-63 procedure and on IGL-71. This ta
 
 A8 and A9 replace "test as every agent" with a structure check, which also catches drift such as the missing reviewers.
 
-**Derived-copy checks** ([Decision section 8](#8-the-boundary-covers-every-derived-copy)). They run at T5, in every weekly run of the IGL-63 check, and after every Paperclip upgrade. D4 also runs on every change to the instructions of an agent in P2 or P3. No probe opens or reads a file or a memory: a listing or a status code is enough.
+**Derived-copy checks** ([Decision section 8](#8-the-boundary-covers-every-derived-copy)). They run at T5, in every weekly run of the IGL-63 check, and after every Paperclip upgrade. D4 also runs on every change to the instructions of an agent in P2 or P3. No probe reads the content of a file or a memory: a listing, an allowed/denied access check or a status code is enough.
 
 | # | Assertion | How | Pass |
 | --- | --- | --- | --- |
-| D1 | Run logs and run events of the pair are closed to other agents | Security Engineer calls `GET /api/heartbeat-runs/{runId}/log` and `/events` on a recent run of each agent in P2 and P3 (the call that returned 200 in IGL-111) | 403 on every call. Any response that carries transcript content is a **fail** |
-| D2 | Other agents' runs cannot reach the copies on disk | From a run of an agent outside the pair, list the pair's run-log directories, the backup directory, and the session home of another run | none of them can be listed or read. A session home left over from a finished run is a **fail** |
+| D1 | Run logs and run events of the pair are closed to other agents | Security Engineer calls the run log and run events API on a recent run of each agent in P2 and P3. The exact calls are in the IGL-63 procedure | 403 on every call. Any response that carries transcript content is a **fail** |
+| D2 | Other agents' runs cannot reach the copies on disk | From a run of an agent outside the pair: (a) list the pair's run-log directories, the backup directory, the pair's execution workspaces and another run's session home; (b) check access to one known file path in each (a canary file a pair run writes, with no contact data), using a check that returns only allowed/denied (`test -r`, or open and close with no read) | every listing and every access check is denied. A session home left over from a finished run is a **fail** |
 | D3 | The pair has no shared memory tool | Read the connection grants and installs of each agent in P2 and P3 | no Supermemory and no other memory connection |
 | D4 | The record-ID-only rule is in place | The eval case from IGL-113, for each agent in P2 and P3 | the eval case passes; the rule text is in the agent's instructions |
 
@@ -470,6 +476,7 @@ Re-open [Decision section 8](#8-the-boundary-covers-every-derived-copy) (a revis
 - **An agent is added to P2 or P3.**
 - **A new memory or logging tool** is added for any agent.
 - **A Paperclip upgrade changes run authorization**, where runs store data, or how session homes are handled. D1 or D2 failing after an upgrade is the signal.
+- **The adapter or model provider changes** for an agent in P2 or P3.
 
 ## Consequences
 
@@ -479,7 +486,7 @@ Easier:
 - **New hires are denied by default** on the contacts base and for record writes on General. The hiring step "add to the contacts block" is gone.
 - **No human step and no second connection.** T3 can run as soon as this is approved. One connection to run and audit, and IGL-30 holds with no exception.
 - "Boundary holds" is a fixed list (A1 to A10, with A3b to A3d, and D1 to D4) that can be run, not a judgement call. A3 runs every week from the Security Engineer's normal General access.
-- Contact data cannot be read from run logs, backups, session homes or shared memory by an agent outside the pair (section 8), and erasure has a defined step for each copy.
+- Contact data cannot be read from run logs, backups, session homes, execution workspaces, run summaries or shared memory by an agent outside the pair (section 8), and erasure has a defined step for each copy.
 
 Harder:
 
@@ -520,8 +527,8 @@ Given up:
 | A contact is written into the old tables in the pipeline base. | P1 blocks writes for every agent. A7 checks both stay at 0 records. |
 | Personal data leaks into the pipeline base through free text (a name in `Independence note`, `Source`, `Reply`). | IGL-42 rule F4 and condition 7: no names of people in Teams, RunWeeks, Findings, FixPRs. |
 | Orphaned contacts after a team is deleted. | The weekly delete-by step also deletes contacts whose Team key no longer exists. |
-| **An agent outside the pair reads contact data from a derived copy** (run log, run events, backup, session home, shared memory) without calling Airtable, so no tool policy sees it. | C1 to C3 (Decision section 8). D1 to D4 at T5d, weekly, and after every Paperclip upgrade. |
-| An agent in the pair writes contact data into a comment, document or approval text, which every agent can read. Only an instruction (C3) prevents it, and a prompt-injected agent can ignore it. | C3 with an eval case (D4). Accepted as residual risk. C5 covers erasure of runs; a contact in a comment is found by its record ID and removed by hand. |
+| **An agent outside the pair reads contact data from a derived copy** (run log, run events, backup, session home, execution workspace, run summary or handoff, shared memory) without calling Airtable, so no tool policy sees it. | C1 to C3 (Decision section 8). D1 to D4 at T5d, weekly, and after every Paperclip upgrade. |
+| An agent in the pair writes contact data into a comment, document, approval text, GitHub, the pipeline base or an external tool query. Only an instruction (C3) prevents it, and a prompt-injected agent can ignore it. | C3 with an eval case (D4). Accepted as residual risk. D5 (planned) detects it in comments, documents and approval texts. C5 covers erasure of runs; a contact in a comment is found by its record ID and removed by hand. |
 | C1 is not delivered before wave 1. | The fallback in Decision section 8: the first record waits, or the CEO picks another interim control. |
 | A copy outlives erasure in a backup. | C6: the backup rotation period is recorded in the processor inventory, so the copy has a known end date. |
 | The public repository gives an attacker a targeting map (base, connection, agent and policy IDs, open gaps) for prompt injection through page content. | This ADR names roles and policies but no live IDs or current state; those are on IGL-71. Earlier commits on the PR #4 branch contain IDs. They are identifiers, not secrets, so the Security Engineer required no history rewrite or rotation. |
