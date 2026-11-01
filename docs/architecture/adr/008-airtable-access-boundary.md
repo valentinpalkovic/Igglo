@@ -1,10 +1,10 @@
 # ADR-008: Airtable access boundary for personal data
 
-Status: accepted, revision 3. Takes effect at the wave 1 trigger. Until T5 passes, D-2026-11-01-01 applies to everything outside this decision. Revision 3 is in force when it is merged to `main` after Head of Tech approval on IGL-114.
-Date: 2026-10-31, updated 2026-11-01 (board decision on O1; CEO deferral D-2026-11-01-01; boundary design from IGL-71, revision 4; revision 2 of this ADR: single connection, decided in IGL-71 design revision 5, applied state from revision 6; **revision 3: the boundary covers every derived copy, decided by the Head of Tech on IGL-111**; the generic-need test for C3, an interpretation by the Head of Tech on IGL-111, recorded on IGL-119)
+Status: accepted, revision 4. Takes effect at the wave 1 trigger. Until T5 passes, D-2026-11-01-01 applies to everything outside this decision. Revision 4 is in force when it is merged to `main` after Security Engineer review and Head of Tech approval on IGL-132.
+Date: 2026-10-31, updated 2026-11-01 (board decision on O1; CEO deferral D-2026-11-01-01; boundary design from IGL-71, revision 4; revision 2 of this ADR: single connection, decided in IGL-71 design revision 5, applied state from revision 6; **revision 3: the boundary covers every derived copy, decided by the Head of Tech on IGL-111**; the generic-need test for C3, an interpretation by the Head of Tech on IGL-111, recorded on IGL-119; **revision 4: the contacts catch-all block is unanchored and A3e is added, from IGL-71 design revisions 8 to 10**)
 Owner: Architekt
 Approver: Head of Tech
-Issues: [IGL-55](/IGL/issues/IGL-55) (first version), [IGL-74](/IGL/issues/IGL-74) (revision 1), [IGL-83](/IGL/issues/IGL-83) (revision 2), [IGL-114](/IGL/issues/IGL-114) (revision 3, this one), [IGL-119](/IGL/issues/IGL-119) (the generic-need test in section 8). Source of revision 3: the Head of Tech decision on [IGL-111](/IGL/issues/IGL-111) (2026-11-01, 16:25 UTC). Source of the decision: [IGL-71 design document](/IGL/issues/IGL-71#document-design), **revision 6** (2026-11-01, 13:25 UTC). Revision 6 has the same decision as revision 5 (13:05 UTC) and adds the applied state from step T3. The design revises the [IGL-51 decision](/IGL/issues/IGL-51#document-decision), decisions 1 to 3 and update 4. The reasons for the single connection are in design section 0a.
+Issues: [IGL-55](/IGL/issues/IGL-55) (first version), [IGL-74](/IGL/issues/IGL-74) (revision 1), [IGL-83](/IGL/issues/IGL-83) (revision 2), [IGL-114](/IGL/issues/IGL-114) (revision 3), [IGL-119](/IGL/issues/IGL-119) (the generic-need test in section 8), [IGL-132](/IGL/issues/IGL-132) (revision 4, this one). Source of revision 4: [IGL-71 design document](/IGL/issues/IGL-71#document-design), **revision 10** (2026-11-01, 14:26 UTC). Revision 10 has the same access decision as revision 5. Revision 8 (14:19 UTC) changed the match form of the contacts catch-all block (design sections 0b and 4) and added step T3b and assertion A3e; revisions 9 and 10 record that both are done. Source of revision 3: the Head of Tech decision on [IGL-111](/IGL/issues/IGL-111) (2026-11-01, 16:25 UTC). Source of the decision: [IGL-71 design document](/IGL/issues/IGL-71#document-design), **revision 6** (2026-11-01, 13:25 UTC). Revision 6 has the same decision as revision 5 (13:05 UTC) and adds the applied state from step T3. The design revises the [IGL-51 decision](/IGL/issues/IGL-51#document-decision), decisions 1 to 3 and update 4. The reasons for the single connection are in design section 0a.
 
 ## Where the live identifiers are
 
@@ -198,8 +198,9 @@ The existing ask-first policy for `analyze_table` (priority 50) is not used and 
 **Condition form (as applied at T3, deliberate).**
 
 - **The allows (P0, P2, P3) and the contacts delete ask-first** use `fieldEquals` on `baseId` with the contacts base ID. They are exact-case.
-- **The contacts catch-all block** uses `fieldMatches` with a case-insensitive regex on the same ID. `fieldMatches` takes a plain regex with no flags, so the regex spells out case-insensitivity with anchored character classes (`^…$`). The regex contains the base ID, so it is on IGL-71 (design section 4), not here.
-- **Why the two forms differ:** a contacts base ID in the wrong case misses every allow and hits the block. That fails safe, even for the pair. This is part of the boundary on purpose. Do not change the block to `fieldEquals`, and do not make the allows case-insensitive. A3c checks it.
+- **The contacts catch-all block** uses `fieldMatches` with a case-insensitive regex on the same ID. `fieldMatches` takes a plain regex with no flags, so the regex spells out case-insensitivity with character classes. **The regex is unanchored on purpose** (no `^` or `$`, revision 4). `fieldMatches` is a search, not a full match, so the block matches the contacts base ID anywhere in the value. The regex contains the base ID, so it is on IGL-71 (design section 4), not here.
+- **Why the block is unanchored** (IGL-71 design section 0b, step T3b): with anchors, a padded or prefixed contacts base ID (a leading space, an extra prefix or suffix) missed every allow *and* the block. Only a schema validator further down the call path rejected it. We don't own that validator and don't test it, and the policies are the only layer we own (section 7). Without anchors, such a value hits the block, so the policy itself denies it. No other base ID can contain the 17-character contacts ID, so calls on the other bases are unaffected. Changed on 2026-11-01 at 14:19:51 UTC ([IGL-101](/IGL/issues/IGL-101)).
+- **Why the two forms differ:** a contacts base ID in the wrong case, with padding or with a prefix or suffix misses every allow and hits the block. That fails safe, even for the pair. This is part of the boundary on purpose. **Neither side may be "fixed" back:** do not add anchors to the block, do not change the block to `fieldEquals`, and do not make the allows case-insensitive or loose. A3c, A3e and A8 check it.
 
 Why the order holds (first match wins):
 
@@ -231,7 +232,7 @@ They stay in place and empty. Nothing is deleted, so no CEO approval is needed. 
 
 Compensating checks:
 
-- **A3 to A3d** probe the block live on every weekly run: a base-scoped read by an agent outside the pair (A3), other read paths including a table *name* (A3b), a wrong-case base ID that must hit the case-insensitive block (A3c), and a write by an agent with read-only access (A3d).
+- **A3 to A3e** probe the block live on every weekly run: a base-scoped read by an agent outside the pair (A3), other read paths including a table *name* (A3b), a wrong-case base ID that must hit the case-insensitive block (A3c), a write by an agent with read-only access (A3d), and a padded or prefixed base ID that must hit the unanchored block, not a validator (A3e).
 - **The A8 schema invariant** re-reads the Airtable tool schemas on every run. Every tool except the 12 base-less tools (Context, 0a point 4) must require `baseId` with `^app[A-Za-z0-9]{14}$`. A new tool without `baseId` fails A8 until the Head of Tech classifies it. Because the block does not match a call without `baseId`, this invariant is what makes the block cover all base data.
 - **The catch-all block has no actor condition**, so a new hire is denied by default.
 - **A8 also checks the policy structure:** priorities, selectors, conditions, no stray allows, nothing below 10.
@@ -351,7 +352,7 @@ flowchart LR
 
 ## Definition: "boundary holds"
 
-The boundary holds when all of A1 to A10, including A3b to A3d, pass, and the derived-copy checks D1 to D4, with D4b (revision 3, below), pass. The [IGL-63](/IGL/issues/IGL-63) check runs them ([IGL-70](/IGL/issues/IGL-70)) after T4 and before T6, then weekly and after every Airtable connection change. Every probe that could write uses `update_records_for_table` with a record ID that does not exist (for example `recAAAAAAAAAAAAAA`). If a policy wrongly allows the call, Airtable rejects it and no data changes.
+The boundary holds when all of A1 to A10, including A3b to A3e, pass, and the derived-copy checks D1 to D4, with D4b (revision 3, below), pass. The [IGL-63](/IGL/issues/IGL-63) check runs them ([IGL-70](/IGL/issues/IGL-70)) after T4 and before T6, then weekly and after every Airtable connection change. Every probe that could write uses `update_records_for_table` with a record ID that does not exist (for example `recAAAAAAAAAAAAAA`). If a policy wrongly allows the call, Airtable rejects it and no data changes.
 
 A deny must come from the named policy. An Airtable error such as "not found" means the call got through the policies, so it counts as a **fail** unless the row says otherwise.
 
@@ -365,11 +366,12 @@ The exact IDs each probe uses are in the IGL-63 procedure and on IGL-71. This ta
 | A3b | Other read paths on the contacts base are denied too | Security Engineer calls `search_records` on the contacts base with the table **name** `Contacts`, and `list_records_for_table` on the contacts base | both denied by the contacts catch-all block |
 | A3c | A wrong-case base ID hits the block | Security Engineer calls `list_tables_for_base` with the contacts base ID in lower case | `deny_policy_block`, by the contacts catch-all block. Anything else is a **fail**, including "rejected by Airtable as an unknown base": that means the case-insensitive regex did not match |
 | A3d | An agent without write access to the contacts base can't write into it | Head of Product calls `update_records_for_table` (nonexistent record) on the contacts base, at the Security Engineer's request | denied by the contacts catch-all block |
+| A3e | A padded or prefixed base ID is denied by the policy, not by a validator | Security Engineer calls `list_tables_for_base` with the contacts base ID (a) padded with a leading space and (b) with an extra prefix | both `deny_policy_block`, by the contacts catch-all block. A schema or validation error is a **fail**: it means the block missed and a validator further down caught the value |
 | A4 | Off-list holds | Security Engineer calls `list_automations` on General | denied by the Off-list block |
 | A5 | Non-writers can't write on General | Security Engineer calls `update_records_for_table` (nonexistent record) on a pipeline table **other than** the 2 old tables | denied by the General write block |
 | A6 | Old tables are guarded | the same probe, targeting the old `Contacts` table | denied by **P1**. A deny from the General write block alone is a **fail**, because that block does not stop the 4 writers |
 | A7 | Old tables are empty | `list_records_for_table` on both | `totalRecordCount` 0 |
-| A8 | Policy structure matches Decision section 4 | `GET /companies/{id}/tools/policies`, plus the Airtable tool schemas | the 9 permanent policies enabled with the listed priorities, selectors and conditions; P0 absent; P2, P3, P4 name only the listed agents; P3 has only read tools; the contacts catch-all block and the General write block have no actor condition; the `analyze_table` ask-first policy disabled; no other enabled `allow` matches General, including policies with no connection selector; no enabled policy that matches General sits below priority 10. **Schema invariant:** every Airtable tool except the 12 base-less tools (Context, 0a point 4) requires `baseId` with `^app[A-Za-z0-9]{14}$`; `create_records_for_table` and `update_records_for_table` still require `tableId` with `^tbl[A-Za-z0-9]{14}$`. A new tool without `baseId` fails A8 until the Head of Tech classifies it |
+| A8 | Policy structure matches Decision section 4 | `GET /companies/{id}/tools/policies`, plus the Airtable tool schemas | the 9 permanent policies enabled with the listed priorities, selectors and conditions; P0 absent; P2, P3, P4 name only the listed agents; P3 has only read tools; the contacts catch-all block and the General write block have no actor condition; the contacts catch-all block has the unanchored regex in IGL-71 design section 4 (an anchored form is a **fail**); the `analyze_table` ask-first policy disabled; no other enabled `allow` matches General, including policies with no connection selector; no enabled policy that matches General sits below priority 10. **Schema invariant:** every Airtable tool except the 12 base-less tools (Context, 0a point 4) requires `baseId` with `^app[A-Za-z0-9]{14}$`; `create_records_for_table` and `update_records_for_table` still require `tableId` with `^tbl[A-Za-z0-9]{14}$`. A new tool without `baseId` fails A8 until the Head of Tech classifies it |
 | A9 | Airtable connections match Decision section 2 | `GET /tools/connections` | **exactly 1** active Airtable connection (General); the old contacts connection archived; no enabled Airtable policy names an inactive connection. A second active Airtable connection is a **fail** until it is added to Decision section 2 |
 | A10 | Admin facts (F2) | read IGL-71 | recorded on 2026-11-01: none. Asked again only if the contacts base gets collaborators, share links, forms or interfaces |
 
@@ -398,11 +400,19 @@ Progress on each step is recorded on [IGL-71](/IGL/issues/IGL-71#document-design
 | ~~T2b~~ | — | Dropped in revision 2 (Context, 0a points 1 and 2). |
 | T3 | Agent-Ops | Applies Decision section 4 except P0. Applied on 2026-11-01; the IDs and state are in IGL-71 design revision 6. Answered: an `arguments` condition does not match an absent argument (Context, policy engine). |
 | T4 | Head of Customers, Agent-Ops | Agent-Ops creates P0. Head of Customers builds the 2 tables in the contacts base. Agent-Ops deletes P0. |
-| T5 | Security Engineer | Runs A1 to A10 (with A3b to A3d) and posts the result (IGL-70), by 2026-11-16. |
+| T5 | Security Engineer | Runs A1 to A10 (with A3b to A3e) and posts the result (IGL-70), by 2026-11-16. A3e was added in IGL-71 design revision 8, after step T3b removed the anchors from the contacts catch-all block. |
 | T5d | board, Agent-Ops, Security Engineer | C1 (IGL-112) and C2, C3 (IGL-113) are in place. The Security Engineer runs D1 to D4, with D4b, and posts the result on IGL-111. Added in revision 3. |
 | T6 | Head of Customers | Writes the first contact record **only after T5 and T5d pass** and the Head of Tech confirms on IGL-71. Planned for 2026-11-23. |
 
 Nobody writes to the contacts base until T5 and T5d pass. C4 to C6 must be in place before the first erasure request.
+
+## What revision 4 changes from revision 3
+
+Revision 4 ([IGL-132](/IGL/issues/IGL-132)) brings this file in line with IGL-71 design revisions 8 to 10. It changes no access: who can reach what is the same as in revision 3.
+
+- [Decision section 4](#4-policies): the contacts catch-all block is unanchored, and the reason. Before revision 4 this file said "anchored", which described the state before step T3b.
+- A3e in the [Definition](#definition-boundary-holds): a padded or prefixed contacts base ID must be denied by the block. A8 fails on an anchored block.
+- Rows in Evolution, Consequences, Risks and Security review.
 
 ## What revision 3 adds to revision 2
 
@@ -478,12 +488,14 @@ Kept as the record of how the first version was built. Replaced at about 12:00 U
 
 Designed for the current stage: one human admin, one base with personal data, about 20 agents, wave 1 starting 2026-11-23.
 
+Revision 4 ([IGL-132](/IGL/issues/IGL-132), IGL-71 design revision 10): the contacts catch-all block is unanchored and A3e is added. No access change, so a revision and not a new ADR.
+
 Revisit (new ADR that supersedes this one) when any of these happens:
 
 - **A human restricts General's grant**, for example to the "Iglo Labs" workspace. Then the optional second layer (a separate connection for the contacts base, Decision section 7) becomes possible. Optional; nobody waits for it.
 - **A second base with personal data** is planned. Then one `baseId` condition per base may not be enough on its own, and a lower-role Airtable account becomes worth its seat.
 - **The A8 schema invariant fails:** a tool that reaches base data stops requiring an `app…` `baseId`, or the write tools stop requiring a `tbl…` `tableId`. Then the contacts block or P1 can be bypassed, and the policies need a new design.
-- **The policy engine changes** its evaluation order, gains an "everyone except" actor condition, changes how `fieldMatches` reads a regex, or changes how an `arguments` condition treats an absent argument (today: no match, answered at T3). A3 to A6 or A8 failing on an unchanged policy set is the signal.
+- **The policy engine changes** its evaluation order, gains an "everyone except" actor condition, changes how `fieldMatches` reads a regex (today a search, not a full match; the unanchored block depends on it), or changes how an `arguments` condition treats an absent argument (today: no match, answered at T3). A3 to A6 or A8 failing on an unchanged policy set is the signal.
 - **More than one person** needs owner or creator access to a workspace.
 - **The board asks for a lower-role account**, or reverses or widens the IGL-30 ruling.
 - Airtable adds per-table read permissions inside a base, or Paperclip scopes grants per base. Either would make option B or a single base viable.
@@ -502,12 +514,12 @@ Easier:
 - A prompt-injected or mistaken agent outside the pair cannot reach contacts records: every tool that reaches base data must name the contacts base by ID, and the contacts catch-all block denies it.
 - **New hires are denied by default** on the contacts base and for record writes on General. The hiring step "add to the contacts block" is gone.
 - **No human step and no second connection.** T3 can run as soon as this is approved. One connection to run and audit, and IGL-30 holds with no exception.
-- "Boundary holds" is a fixed list (A1 to A10, with A3b to A3d, and D1 to D4, with D4b) that can be run. Every item is a mechanical check except D4b, which applies a written test with four points. A3 runs every week from the Security Engineer's normal General access.
+- "Boundary holds" is a fixed list (A1 to A10, with A3b to A3e, and D1 to D4, with D4b) that can be run. Every item is a mechanical check except D4b, which applies a written test with four points. A3 runs every week from the Security Engineer's normal General access.
 - Contact data cannot be read from run logs, backups, session homes, execution workspaces, run summaries or shared memory by an agent outside the pair (section 8), and erasure has a defined step for each copy.
 
 Harder:
 
-- **One layer instead of two.** A policy mistake or an engine change exposes contacts to every agent on General, not to one. Mitigated by A3 to A3d and A8 (Decision section 7).
+- **One layer instead of two.** A policy mistake or an engine change exposes contacts to every agent on General, not to one. Mitigated by A3 to A3e and A8 (Decision section 7).
 - The boundary depends on the tool schemas requiring `baseId` in `app…` form. A8 must re-read them on every run, and every new Airtable tool needs a classification by the Head of Tech.
 - Every agent can see the contacts base's name and ID through the base-less tools. No records.
 - Two bases in two workspaces to keep consistent. The Team key is plain text, so a deleted team can leave orphaned contacts. The weekly delete-by step (IGL-42 F3) must also clean contacts of deleted teams.
@@ -530,9 +542,10 @@ Given up:
 
 | Risk | Mitigation |
 | --- | --- |
-| **The policies are the only layer.** If the contacts catch-all block fails open, or a stray allow sits above it, every agent on General can read contacts. | A3 to A3d probe the block live every week. A8 checks priorities, selectors and conditions, fails on any other enabled allow that matches General (also with no connection selector), and fails on any matching policy below priority 10. Accepted by the Head of Tech (Decision section 7). |
+| **The policies are the only layer.** If the contacts catch-all block fails open, or a stray allow sits above it, every agent on General can read contacts. | A3 to A3e probe the block live every week. A8 checks priorities, selectors and conditions, fails on any other enabled allow that matches General (also with no connection selector), and fails on any matching policy below priority 10. Accepted by the Head of Tech (Decision section 7). |
 | A tool that reaches base data does not require `baseId` in `app…` form, now or after an update. An `arguments` condition does not match a call without the argument (answered at T3), so such a call reaches the contacts base without matching the contacts catch-all block. | A8 schema invariant, which is what makes the block cover all base data: every tool except the 12 base-less tools must require `baseId` with `^app[A-Za-z0-9]{14}$`; a new tool without `baseId` fails until classified. |
-| A wrong-case base ID slips past an exact `fieldEquals` match. | The contacts catch-all block uses a case-insensitive, anchored `fieldMatches` regex (Decision section 4); the allows stay exact-case, so a wrong-case ID misses them and hits the block. A3c passes only on a deny by the block. |
+| A wrong-case, padded or prefixed base ID slips past an exact `fieldEquals` match. | The contacts catch-all block uses a case-insensitive, **unanchored** `fieldMatches` regex (Decision section 4); the allows stay exact-case `fieldEquals`, so such an ID misses them and hits the block. A3c and A3e pass only on a deny by the block; A8 fails on an anchored block. |
+| Someone "fixes" the block back to anchors or `fieldEquals`, or loosens the allows. A padded ID then misses the block and only a validator we don't own stops it (the state before IGL-71 design revision 8). | Decision section 4 forbids these changes. A8 fails on an anchored block, and A3e fails if a validator, not the block, rejects the padded ID. |
 | The contacts base is copied or moved and gets a new ID outside the policies. | Forbidden (Decision section 1). A1 fails on a sixth base in General. |
 | **Policies are bound to a connection ID.** When a connection is replaced, they stay on the old ID and the new connection comes up with every tool allowed. This happened on 2026-11-01 ([IGL-54](/IGL/issues/IGL-54)). | Agent-Ops removes the archived connection from every policy at T3. A9 fails if any enabled policy names an inactive connection, or if a second Airtable connection is active. |
 | A new agent is hired and nobody updates a list. This happened with the deny lists: Reviewer Terra and Reviewer Opus. | Allow-list plus catch-all block (Decision section 4). A3 and A5 prove it with a denied call from an agent outside the lists; A8 checks that the blocks have no actor condition. |
@@ -557,6 +570,8 @@ No new Airtable seat and no second connection. The second workspace costs nothin
 ## Security review
 
 Required: the decision touches customer personal data and the access of an external service. Input: [IGL-42 security review](/IGL/issues/IGL-42#document-security-review) (F1, F2, sections 1 and 5). The Security Engineer reviews revision 2 on [IGL-83](/IGL/issues/IGL-83), not on the public PR, and runs A1 to A10 with A3b to A3d at T5 ([IGL-70](/IGL/issues/IGL-70)) before the first contact record.
+
+Revision 4: the Security Engineer reviews it on [IGL-132](/IGL/issues/IGL-132), because it changes the description of the only layer in front of personal data. A3e was first run at T5 on 2026-11-01 ([IGL-103](/IGL/issues/IGL-103)).
 
 Revision 3: input is the Security Engineer's finding on [IGL-111](/IGL/issues/IGL-111). The Security Engineer reviews revision 3 on [IGL-114](/IGL/issues/IGL-114) and runs D1 to D4, with D4b, at T5d. The Security Engineer reviews the generic-need test on [IGL-119](/IGL/issues/IGL-119). The current state of the derived copies (what is readable today, and by whom) stays on IGL-111, not in this public file.
 
