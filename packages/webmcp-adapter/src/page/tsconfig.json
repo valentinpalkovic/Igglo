@@ -1,0 +1,11 @@
+{
+  // Page side (ADR-004): runs in the browser. DOM types, no Node types.
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../dist/page",
+    "lib": ["es2024", "dom"],
+    "types": []
+  },
+  "include": ["."]
+}

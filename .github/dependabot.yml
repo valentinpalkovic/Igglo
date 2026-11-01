@@ -1,0 +1,27 @@
+# ADR-006: Dependabot updates npm and github-actions weekly.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    ignore:
+      # typescript-eslint supports only a fixed TypeScript range
+      # (https://typescript-eslint.io/users/dependency-versions/#typescript).
+      # Remove this when typescript-eslint supports the next TypeScript minor.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+    groups:
+      dev-tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        update-types: [minor, patch]
