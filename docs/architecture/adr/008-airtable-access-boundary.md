@@ -1,10 +1,10 @@
 # ADR-008: Airtable access boundary for personal data
 
 Status: accepted, revision 3. Takes effect at the wave 1 trigger. Until T5 passes, D-2026-11-01-01 applies to everything outside this decision. Revision 3 is in force when it is merged to `main` after Head of Tech approval on IGL-114.
-Date: 2026-10-31, updated 2026-11-01 (board decision on O1; CEO deferral D-2026-11-01-01; boundary design from IGL-71, revision 4; revision 2 of this ADR: single connection, decided in IGL-71 design revision 5, applied state from revision 6; **revision 3: the boundary covers every derived copy, decided by the Head of Tech on IGL-111**)
+Date: 2026-10-31, updated 2026-11-01 (board decision on O1; CEO deferral D-2026-11-01-01; boundary design from IGL-71, revision 4; revision 2 of this ADR: single connection, decided in IGL-71 design revision 5, applied state from revision 6; **revision 3: the boundary covers every derived copy, decided by the Head of Tech on IGL-111**; the generic-need test for C3, an interpretation by the Head of Tech on IGL-111, recorded on IGL-119)
 Owner: Architekt
 Approver: Head of Tech
-Issues: [IGL-55](/IGL/issues/IGL-55) (first version), [IGL-74](/IGL/issues/IGL-74) (revision 1), [IGL-83](/IGL/issues/IGL-83) (revision 2), [IGL-114](/IGL/issues/IGL-114) (revision 3, this one). Source of revision 3: the Head of Tech decision on [IGL-111](/IGL/issues/IGL-111) (2026-11-01, 16:25 UTC). Source of the decision: [IGL-71 design document](/IGL/issues/IGL-71#document-design), **revision 6** (2026-11-01, 13:25 UTC). Revision 6 has the same decision as revision 5 (13:05 UTC) and adds the applied state from step T3. The design revises the [IGL-51 decision](/IGL/issues/IGL-51#document-decision), decisions 1 to 3 and update 4. The reasons for the single connection are in design section 0a.
+Issues: [IGL-55](/IGL/issues/IGL-55) (first version), [IGL-74](/IGL/issues/IGL-74) (revision 1), [IGL-83](/IGL/issues/IGL-83) (revision 2), [IGL-114](/IGL/issues/IGL-114) (revision 3, this one), [IGL-119](/IGL/issues/IGL-119) (the generic-need test in section 8). Source of revision 3: the Head of Tech decision on [IGL-111](/IGL/issues/IGL-111) (2026-11-01, 16:25 UTC). Source of the decision: [IGL-71 design document](/IGL/issues/IGL-71#document-design), **revision 6** (2026-11-01, 13:25 UTC). Revision 6 has the same decision as revision 5 (13:05 UTC) and adds the applied state from step T3. The design revises the [IGL-51 decision](/IGL/issues/IGL-51#document-decision), decisions 1 to 3 and update 4. The reasons for the single connection are in design section 0a.
 
 ## Where the live identifiers are
 
@@ -26,7 +26,7 @@ Keep live identifiers out of this file and out of the PR. Add them on IGL-71.
 
 The trigger was flagged on 2026-11-01 (T0), so the [Trigger sequence](#trigger-sequence) is running. Wave 1 is planned for 2026-11-23. The verified state and the progress of each step are tracked on [IGL-71](/IGL/issues/IGL-71#document-design) (sections 0 and 7), not here.
 
-**Head of Tech decision on IGL-111** (2026-11-01): the contacts boundary covers every copy of what an agent read, not only Airtable tool calls. No contact record goes into `Contacts` or `Outreach log` until controls C1 to C3 in [Decision section 8](#8-the-boundary-covers-every-derived-copy) are in place and D1 to D4 pass. The progress is tracked on IGL-111, not here.
+**Head of Tech decision on IGL-111** (2026-11-01): the contacts boundary covers every copy of what an agent read, not only Airtable tool calls. No contact record goes into `Contacts` or `Outreach log` until controls C1 to C3 in [Decision section 8](#8-the-boundary-covers-every-derived-copy) are in place and D1 to D4, with D4b, pass. The progress is tracked on IGL-111, not here.
 
 ## Context
 
@@ -275,9 +275,24 @@ The controls. The owners and due dates are those set on IGL-111. The progress is
 
 **C3 is the only control on comments, documents and writes outside Paperclip.** Every agent can read every issue in the company, so C3 depends on the pair following an instruction. A prompt-injected agent in the pair could break it. D4 checks the rule is in place, not that it is never broken. This is accepted as a residual risk (Risks and mitigations). A detective check (D5, planned) is to follow.
 
+**What "message content" in C3 covers: the generic-need test.** *(Interpretation by the Head of Tech on IGL-111, 2026-11-01, recorded on [IGL-119](/IGL/issues/IGL-119).)* A product need that came from a contact's message may go into GitHub as a generic requirement, for example "JUnit XML output for test runs". It is contact data, and stays out of GitHub, unless it passes this test:
+
+> Someone could have written the text without knowing who asked and without reading their message.
+
+So GitHub text (issues, PRs, commits) written by the pair has none of these:
+
+- who asked, their company, their e-mail domain, their reasons or their words;
+- a reference to a contact, partner, lead or request (for example "a design partner wants …");
+- details that fit only their app: tool names, URLs, routes, product names, or a description of their stack that points to them;
+- a date or timing that ties the text to one conversation.
+
+**Why.** GitHub text can be public. A requirement that passes the test is not personal data and cannot be traced back to a person. A complete ban protects no one, and agents then leave the product need out of the issue, so engineering gets no signal (seen in the IGL-113 eval).
+
+The rule in the pair's instructions is checked by D4. D4b checks the GitHub issues of the pair against the full test. A GitHub text that fails the test is a C3 breach.
+
 **Fallback.** If C1 is not in place by 2026-11-16, the first contact record waits, or the CEO picks another interim control (for example, a human enters the personal fields directly in the Airtable UI and no agent run ever reads them). The trigger does not proceed without one of the two.
 
-**Checks.** D1 to D4 are part of "boundary holds" ([Definition](#definition-boundary-holds)). D1 and D2 are the Security Engineer's IGL-111 re-test made permanent.
+**Checks.** D1 to D4, with D4b, are part of "boundary holds" ([Definition](#definition-boundary-holds)). D1 and D2 are the Security Engineer's IGL-111 re-test made permanent.
 
 **Planned: D5, a scan for C3.** A weekly scan of the pair's comments, documents and approval texts for e-mail and phone patterns. It reports issue and comment IDs only, never the matched text. Owner: Security Engineer, as a follow-up task after this revision merges. It joins "boundary holds" in a later revision.
 
@@ -336,7 +351,7 @@ flowchart LR
 
 ## Definition: "boundary holds"
 
-The boundary holds when all of A1 to A10, including A3b to A3d, pass, and the derived-copy checks D1 to D4 (revision 3, below) pass. The [IGL-63](/IGL/issues/IGL-63) check runs them ([IGL-70](/IGL/issues/IGL-70)) after T4 and before T6, then weekly and after every Airtable connection change. Every probe that could write uses `update_records_for_table` with a record ID that does not exist (for example `recAAAAAAAAAAAAAA`). If a policy wrongly allows the call, Airtable rejects it and no data changes.
+The boundary holds when all of A1 to A10, including A3b to A3d, pass, and the derived-copy checks D1 to D4, with D4b (revision 3, below), pass. The [IGL-63](/IGL/issues/IGL-63) check runs them ([IGL-70](/IGL/issues/IGL-70)) after T4 and before T6, then weekly and after every Airtable connection change. Every probe that could write uses `update_records_for_table` with a record ID that does not exist (for example `recAAAAAAAAAAAAAA`). If a policy wrongly allows the call, Airtable rejects it and no data changes.
 
 A deny must come from the named policy. An Airtable error such as "not found" means the call got through the policies, so it counts as a **fail** unless the row says otherwise.
 
@@ -368,6 +383,7 @@ A8 and A9 replace "test as every agent" with a structure check, which also catch
 | D2 | Other agents' runs cannot reach the copies on disk | From a run of an agent outside the pair: (a) list the pair's run-log directories, the backup directory, the pair's execution workspaces and another run's session home; (b) check access to one known file path in each (a canary file a pair run writes, with no contact data), using a check that returns only allowed/denied (`test -r`, or open and close with no read) | every listing and every access check is denied. A session home left over from a finished run is a **fail** |
 | D3 | The pair has no shared memory tool | Read the connection grants and installs of each agent in P2 and P3 | no Supermemory and no other memory connection |
 | D4 | The record-ID-only rule is in place | The eval case from IGL-113, for each agent in P2 and P3 | the eval case passes; the rule text is in the agent's instructions |
+| D4b | GitHub issues of the pair pass the generic-need test | Security Engineer reads the title and body of every GitHub issue opened by an agent in P2 or P3 since the previous run, and applies the [generic-need test](#8-the-boundary-covers-every-derived-copy) and its four points. The IGL-63 procedure says how the pair's issues are found | every issue passes; no new issue also passes. A fail is a C3 breach: report it on IGL-111 with the issue number only, never the text |
 
 If any assertion fails, no record is written. The owner of the failing step fixes it, and T5 runs again.
 
@@ -383,7 +399,7 @@ Progress on each step is recorded on [IGL-71](/IGL/issues/IGL-71#document-design
 | T3 | Agent-Ops | Applies Decision section 4 except P0. Applied on 2026-11-01; the IDs and state are in IGL-71 design revision 6. Answered: an `arguments` condition does not match an absent argument (Context, policy engine). |
 | T4 | Head of Customers, Agent-Ops | Agent-Ops creates P0. Head of Customers builds the 2 tables in the contacts base. Agent-Ops deletes P0. |
 | T5 | Security Engineer | Runs A1 to A10 (with A3b to A3d) and posts the result (IGL-70), by 2026-11-16. |
-| T5d | board, Agent-Ops, Security Engineer | C1 (IGL-112) and C2, C3 (IGL-113) are in place. The Security Engineer runs D1 to D4 and posts the result on IGL-111. Added in revision 3. |
+| T5d | board, Agent-Ops, Security Engineer | C1 (IGL-112) and C2, C3 (IGL-113) are in place. The Security Engineer runs D1 to D4, with D4b, and posts the result on IGL-111. Added in revision 3. |
 | T6 | Head of Customers | Writes the first contact record **only after T5 and T5d pass** and the Head of Tech confirms on IGL-71. Planned for 2026-11-23. |
 
 Nobody writes to the contacts base until T5 and T5d pass. C4 to C6 must be in place before the first erasure request.
@@ -394,6 +410,7 @@ Revision 3 ([IGL-114](/IGL/issues/IGL-114)) records the Head of Tech decision on
 
 - [Decision section 8](#8-the-boundary-covers-every-derived-copy): the boundary covers every derived copy; controls C1 to C6; the fallback; three triggers that re-open the section.
 - D1 to D4 in the [Definition](#definition-boundary-holds), and step T5d before T6.
+- The generic-need test: what "message content" in C3 covers for GitHub text, and D4b, which checks it on the pair's GitHub issues ([IGL-119](/IGL/issues/IGL-119)).
 - Rows in Evolution, Consequences, Risks and Security review.
 
 ## What revision 2 changes from revision 1
@@ -485,7 +502,7 @@ Easier:
 - A prompt-injected or mistaken agent outside the pair cannot reach contacts records: every tool that reaches base data must name the contacts base by ID, and the contacts catch-all block denies it.
 - **New hires are denied by default** on the contacts base and for record writes on General. The hiring step "add to the contacts block" is gone.
 - **No human step and no second connection.** T3 can run as soon as this is approved. One connection to run and audit, and IGL-30 holds with no exception.
-- "Boundary holds" is a fixed list (A1 to A10, with A3b to A3d, and D1 to D4) that can be run, not a judgement call. A3 runs every week from the Security Engineer's normal General access.
+- "Boundary holds" is a fixed list (A1 to A10, with A3b to A3d, and D1 to D4, with D4b) that can be run. Every item is a mechanical check except D4b, which applies a written test with four points. A3 runs every week from the Security Engineer's normal General access.
 - Contact data cannot be read from run logs, backups, session homes, execution workspaces, run summaries or shared memory by an agent outside the pair (section 8), and erasure has a defined step for each copy.
 
 Harder:
@@ -528,7 +545,7 @@ Given up:
 | Personal data leaks into the pipeline base through free text (a name in `Independence note`, `Source`, `Reply`). | IGL-42 rule F4 and condition 7: no names of people in Teams, RunWeeks, Findings, FixPRs. |
 | Orphaned contacts after a team is deleted. | The weekly delete-by step also deletes contacts whose Team key no longer exists. |
 | **An agent outside the pair reads contact data from a derived copy** (run log, run events, backup, session home, execution workspace, run summary or handoff, shared memory) without calling Airtable, so no tool policy sees it. | C1 to C3 (Decision section 8). D1 to D4 at T5d, weekly, and after every Paperclip upgrade. |
-| An agent in the pair writes contact data into a comment, document, approval text, GitHub, the pipeline base or an external tool query. Only an instruction (C3) prevents it, and a prompt-injected agent can ignore it. | C3 with an eval case (D4). Accepted as residual risk. D5 (planned) detects it in comments, documents and approval texts. C5 covers erasure of runs; a contact in a comment is found by its record ID and removed by hand. |
+| An agent in the pair writes contact data into a comment, document, approval text, GitHub, the pipeline base or an external tool query. Only an instruction (C3) prevents it, and a prompt-injected agent can ignore it. | C3 with an eval case (D4). D4b checks the pair's GitHub issues against the generic-need test. Accepted as residual risk. D5 (planned) detects it in comments, documents and approval texts. C5 covers erasure of runs; a contact in a comment is found by its record ID and removed by hand. |
 | C1 is not delivered before wave 1. | The fallback in Decision section 8: the first record waits, or the CEO picks another interim control. |
 | A copy outlives erasure in a backup. | C6: the backup rotation period is recorded in the processor inventory, so the copy has a known end date. |
 | The public repository gives an attacker a targeting map (base, connection, agent and policy IDs, open gaps) for prompt injection through page content. | This ADR names roles and policies but no live IDs or current state; those are on IGL-71. Earlier commits on the PR #4 branch contain IDs. They are identifiers, not secrets, so the Security Engineer required no history rewrite or rotation. |
@@ -541,7 +558,7 @@ No new Airtable seat and no second connection. The second workspace costs nothin
 
 Required: the decision touches customer personal data and the access of an external service. Input: [IGL-42 security review](/IGL/issues/IGL-42#document-security-review) (F1, F2, sections 1 and 5). The Security Engineer reviews revision 2 on [IGL-83](/IGL/issues/IGL-83), not on the public PR, and runs A1 to A10 with A3b to A3d at T5 ([IGL-70](/IGL/issues/IGL-70)) before the first contact record.
 
-Revision 3: input is the Security Engineer's finding on [IGL-111](/IGL/issues/IGL-111). The Security Engineer reviews revision 3 on [IGL-114](/IGL/issues/IGL-114) and runs D1 to D4 at T5d. The current state of the derived copies (what is readable today, and by whom) stays on IGL-111, not in this public file.
+Revision 3: input is the Security Engineer's finding on [IGL-111](/IGL/issues/IGL-111). The Security Engineer reviews revision 3 on [IGL-114](/IGL/issues/IGL-114) and runs D1 to D4, with D4b, at T5d. The Security Engineer reviews the generic-need test on [IGL-119](/IGL/issues/IGL-119). The current state of the derived copies (what is readable today, and by whom) stays on IGL-111, not in this public file.
 
 ## Diagrams
 
