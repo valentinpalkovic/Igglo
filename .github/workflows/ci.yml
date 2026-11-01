@@ -1,7 +1,15 @@
 # CI for the monorepo (ADR-006). Permissions and runner rules as ADR-006 proposes.
 # Each review gate is its own job so branch protection can require it by name
-# (handbook, Code review, "Review gates"). Renaming a job renames its required
-# check: update the branch protection on main in the same PR.
+# (handbook, Code review, "Review gates").
+#
+# Required check: branch protection on main requires the check
+# "lint, typecheck, boundaries, test, build". The job `required` at the end of
+# this file reports it and fails unless every job it needs succeeded.
+# - Renaming a job or a job `name:` renames its check. Renaming `required`'s
+#   name breaks the gate; it needs a branch protection change, decided by the
+#   Head of Tech and the CEO, merged together with the rename (IGL-116).
+# - A new gate that must block merges goes into `required.needs`.
+# - chromatic is not in `required.needs` on purpose (IGL-80, ADR-003).
 # The fram-selftest job (actions: read) is added with the first Fram Action code.
 name: CI
 
@@ -107,3 +115,23 @@ jobs:
           persist-credentials: false
       - name: No node_modules, build output or tool caches in git
         run: node scripts/check-forbidden-paths.mjs
+
+  # Reports the required check for the whole gate (see the header comment).
+  # `if: always()` matters: without it, a failed dependency makes this job
+  # "skipped", and GitHub counts a skipped required check as passing.
+  required:
+    name: lint, typecheck, boundaries, test, build
+    needs: [typecheck, lint, tests, architecture, forbidden-paths]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every needed job succeeded
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$NEEDS" | jq -e 'length > 0 and all(.[]; .result == "success")' > /dev/null || {
+            echo "::error title=Required check::A needed job did not succeed (see the list above)."
+            exit 1
+          }
