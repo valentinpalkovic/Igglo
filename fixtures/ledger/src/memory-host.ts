@@ -4,12 +4,16 @@ import { error, type LedgerTool, type ToolHost, type ToolResult } from "./ledger
 export class MemoryHost implements ToolHost {
   readonly #tools = new Map<string, LedgerTool>();
 
-  registerTool(tool: LedgerTool): void {
+  registerTool(tool: LedgerTool, { signal }: { signal: AbortSignal }): void {
+    if (signal.aborted) return;
     this.#tools.set(tool.name, tool);
-  }
-
-  unregisterTool(name: string): void {
-    this.#tools.delete(name);
+    signal.addEventListener(
+      "abort",
+      () => {
+        if (this.#tools.get(tool.name) === tool) this.#tools.delete(tool.name);
+      },
+      { once: true },
+    );
   }
 
   /** Tool descriptors without `execute`, as copies. */

@@ -6,12 +6,16 @@
  *
  * Query parameters: `bug=B1`…`B8`, `enumOrder=declared|reversed`,
  * `variant=default|uuid`. Unknown values fail loudly, so a typo cannot turn a
- * bug build into a clean build.
+ * bug build into a clean build, and a repeated key fails too, so a URL cannot
+ * select two builds at once.
  */
 import { isBug, startLedger, type LedgerOptions, type ToolHost } from "./ledger.js";
 
 export function optionsFromQuery(query: string): LedgerOptions {
   const params = new URLSearchParams(query);
+  for (const key of new Set(params.keys())) {
+    if (params.getAll(key).length > 1) throw new TypeError(`Query key "${key}" is repeated`);
+  }
   const options: LedgerOptions = {};
   const bug = params.get("bug");
   if (bug !== null) {

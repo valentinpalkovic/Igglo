@@ -46,10 +46,13 @@ export interface LedgerTool {
   execute: (args: Record<string, unknown>) => ToolResult;
 }
 
-/** Where the app registers its tools: `document.modelContext` or a test host. */
+/**
+ * Where the app registers its tools: `document.modelContext` or a test host.
+ * As in WebMCP (ADR-004), there is no `unregisterTool`: aborting the signal
+ * passed at registration unregisters the tool.
+ */
 export interface ToolHost {
-  registerTool(tool: LedgerTool): void;
-  unregisterTool(name: string): void;
+  registerTool(tool: LedgerTool, options: { signal: AbortSignal }): unknown;
 }
 
 type Role = "viewer" | "member" | "admin";
@@ -100,7 +103,7 @@ export function startLedger(host: ToolHost, options: LedgerOptions = {}): void {
   let listWorkspace: Workspace = "alpha";
   let nextId = 1;
   const stale = new Map<string, Expense>();
-  const registered = new Set<string>();
+  const registered = new Map<string, AbortController>();
 
   const rows = (ws: Workspace): Expense[] => {
     if (!store) throw new TypeError("Cannot read properties of null (reading 'alpha')");
@@ -160,7 +163,7 @@ export function startLedger(host: ToolHost, options: LedgerOptions = {}): void {
         rows(workspace).push(item);
         if (has("B7") && item.currency === "USD") {
           store = null;
-          for (const name of [...registered]) unregister(name);
+          for (const name of [...registered.keys()]) unregister(name);
         }
         return ok(item);
       },
@@ -240,12 +243,12 @@ export function startLedger(host: ToolHost, options: LedgerOptions = {}): void {
   ];
 
   function unregister(name: string): void {
+    registered.get(name)?.abort();
     registered.delete(name);
-    host.unregisterTool(name);
   }
 
   function refresh(): void {
-    for (const name of [...registered]) unregister(name);
+    for (const name of [...registered.keys()]) unregister(name);
     for (const [name, description, properties, execute] of definitions) {
       const signedOutTool = name === "sign_in";
       if ((role === null) !== signedOutTool) continue;
@@ -255,13 +258,18 @@ export function startLedger(host: ToolHost, options: LedgerOptions = {}): void {
         required: Object.keys(properties),
         additionalProperties: false,
       };
-      registered.add(name);
-      host.registerTool({
-        name,
-        description,
-        inputSchema,
-        execute: (args) => (isValid(properties, args) ? execute(args) : error("INVALID_ARGUMENT")),
-      });
+      const controller = new AbortController();
+      registered.set(name, controller);
+      host.registerTool(
+        {
+          name,
+          description,
+          inputSchema,
+          execute: (args) =>
+            isValid(properties, args) ? execute(args) : error("INVALID_ARGUMENT"),
+        },
+        { signal: controller.signal },
+      );
     }
   }
 

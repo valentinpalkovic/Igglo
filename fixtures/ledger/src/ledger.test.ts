@@ -316,4 +316,10 @@ describe("page query", () => {
     expect(() => optionsFromQuery("?enumOrder=random")).toThrow(TypeError);
     expect(() => optionsFromQuery("?variant=ulid")).toThrow(TypeError);
   });
+
+  it("fails on a repeated key instead of picking one build", () => {
+    expect(() => optionsFromQuery("?bug=B1&bug=B2")).toThrow(TypeError);
+    expect(() => optionsFromQuery("?bug=B1&bug=B1")).toThrow(TypeError);
+    expect(() => optionsFromQuery("?enumOrder=declared&enumOrder=reversed")).toThrow(TypeError);
+  });
 });
