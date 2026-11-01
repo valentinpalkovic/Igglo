@@ -1,0 +1,10 @@
+{
+  // Driver side (ADR-004): runs in Node. Node types, no DOM types.
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../dist/driver",
+    "types": ["node"]
+  },
+  "include": ["."]
+}

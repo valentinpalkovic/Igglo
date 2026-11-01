@@ -1,0 +1,6 @@
+pnpm-lock.yaml
+dist/
+.turbo/
+coverage/
+# Accepted ADRs are not reformatted; a changed ADR is a new ADR.
+docs/architecture/adr/
