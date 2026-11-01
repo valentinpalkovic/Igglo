@@ -13,6 +13,10 @@ updates:
       # Remove this when typescript-eslint supports the next TypeScript minor.
       - dependency-name: typescript
         update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      # @types/node must match the Node runtime. Bump the major together with
+      # .nvmrc and engines.node on a Node LTS move. Minor and patch still arrive.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       dev-tooling:
         dependency-type: development
