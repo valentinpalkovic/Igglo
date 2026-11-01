@@ -1,58 +1,64 @@
 # ADR-008: Airtable access boundary for personal data
 
-Status: accepted, deferred by CEO decision D-2026-11-01-01 (2026-11-01)
-Date: 2026-10-31, updated 2026-11-01 (board decision on O1, as-built connections, block policy on the contacts connection; deferral and current state)
+Status: accepted, takes effect at the wave 1 trigger. Until then, D-2026-11-01-01 applies.
+Date: 2026-10-31, updated 2026-11-01 (board decision on O1; CEO deferral D-2026-11-01-01; boundary design for the trigger from IGL-71)
 Owner: Architekt
 Approver: Head of Tech
-Issue: [IGL-55](/IGL/issues/IGL-55), from the [IGL-51 decision](/IGL/issues/IGL-51#document-decision)
+Issues: [IGL-55](/IGL/issues/IGL-55) (first version), [IGL-74](/IGL/issues/IGL-74) (this revision). Source of the decision: [IGL-71 design document](/IGL/issues/IGL-71#document-design), which revises the [IGL-51 decision](/IGL/issues/IGL-51#document-decision), decisions 1 to 3 and update 4.
 
-## Current state (deferred)
+## Current state: D-2026-11-01-01 applies until the trigger
 
-**CEO decision D-2026-11-01-01** (2026-11-01, on [IGL-62](/IGL/issues/IGL-62) at 11:53 UTC and on [IGL-51](/IGL/issues/IGL-51) at 12:05 UTC): every agent has full access to every Airtable base until real customer data is in Airtable. The decision in this ADR is not in force now. It is the plan for the trigger below. Source: [IGL-51 decision document, update 3](/IGL/issues/IGL-51#document-decision).
+**CEO decision D-2026-11-01-01** (2026-11-01, on [IGL-62](/IGL/issues/IGL-62) at 11:53 UTC and on [IGL-51](/IGL/issues/IGL-51) at 12:05 UTC): every agent has full access to every Airtable base until real customer data is in Airtable. Nothing in the Decision section below is in force before the trigger.
 
-What is in place now (verified by the Head of Tech with `list-bases`, 2026-11-01 about 12:15 UTC):
+State on 2026-11-01, verified by the Head of Tech with read-only calls ([IGL-71 design, section 0](/IGL/issues/IGL-71#document-design)):
 
-- **One connection:** Airtable General `b9cb271e`, installed for the whole company. It reaches Decision log (`appicd9N1MuKLR2rR`), Forecasts (`appTQcnuiYBY7PSgM`), Iglo Labs Führungs-KPIs (`appwKLdDinRAEjkRP`) and Design-partner pipeline (`appwLmvOxuSEuayfv`).
-- **No contacts base.** The CEO deleted the Design-partner contacts base `appRL6tCPR8sLtSCF` (IGL-62). The contacts connection `169a9e32` is archived.
-- **`Contacts` and `Outreach log` stay in the pipeline base, empty** (0 records each, reported by Head of Customers on 2026-11-01). No personal data goes into Airtable until the trigger.
-- **Block policies are disabled, not deleted**, so every agent has every tool on every base. They stay ready to re-enable at the trigger.
+- **Airtable General** `b9cb271e-5823-449c-9d7c-1b4f07805277` is active and installed for the whole company. `list_bases` returns exactly 4 bases, all at `create` level: Decision log `appicd9N1MuKLR2rR`, Forecasts `appTQcnuiYBY7PSgM`, Iglo Labs Führungs-KPIs `appwKLdDinRAEjkRP`, Design-partner pipeline `appwLmvOxuSEuayfv`.
+- **Airtable Design Partner Contacts** `169a9e32-76e8-4e84-82e4-41edf380dcaf` is archived. The CEO deleted its base `appRL6tCPR8sLtSCF` ([IGL-62](/IGL/issues/IGL-62)).
+- **`Contacts` `tblxqUK94gGMGrTSl` and `Outreach log` `tblQvZJcwSF7cwVNr`** stay in the pipeline base with 0 records each. No personal data goes into Airtable before the trigger.
+- **All 5 Airtable policies are disabled, not deleted:** `b63a6dda`, `fd2ea28c`, `793b136f`, `6d7dbd39`, `9ef41c27`. Each is still bound to `169a9e32` and/or `b9cb271e`.
 - **The [IGL-63](/IGL/issues/IGL-63) boundary check is paused.** It would fail against the open state on purpose.
 
-**Trigger: the decision in this ADR is applied before the first record is written to `Contacts` or `Outreach log`** (wave 1 is planned for 2026-11-23). Head of Customers flags it on [IGL-51](/IGL/issues/IGL-51) first. Then, before any write:
-
-1. The Head of Tech decides the boundary again, starting from the Decision section below. The contacts base and its connection must be re-created, so this is new work.
-2. Agent-Ops re-enables the block policies and binds them to the current connection IDs (see the first risk).
-3. The Security Engineer runs the IGL-63 check against the restricted design.
-4. A human records the admin facts (Decision step 5).
-
-If the boundary at the trigger differs from the Decision below, it is recorded in a new ADR that supersedes this one.
+**Trigger:** the Decision below is applied before the first record is written to `Contacts` or `Outreach log`. Wave 1 is planned for 2026-11-23. Head of Customers flags the trigger on [IGL-71](/IGL/issues/IGL-71) by 2026-11-16. The steps are in [Trigger sequence](#trigger-sequence).
 
 ## Context
 
-The design-partner pipeline base (`appwLmvOxuSEuayfv`, built in IGL-36) will hold personal data: the Contacts and Outreach log tables. The [IGL-42 security review](/IGL/issues/IGL-42#document-security-review) found:
+The design-partner pipeline (`appwLmvOxuSEuayfv`, built in IGL-36) will need personal data: contacts and an outreach log. The [IGL-42 security review](/IGL/issues/IGL-42#document-security-review) found:
 
-- **F1 (high):** every agent on the shared Airtable connection acts as workspace owner. Any agent can read, export, change or delete every table, Contacts included, and can create public share links. Airtable has no per-table read limit inside a base.
+- **F1 (high):** every agent on the shared Airtable connection acts as workspace owner. Any agent can read, export, change or delete every table, contacts included, and can create public share links. Airtable has no per-table read limit inside a base.
 - **F2 (high):** the plan, the collaborators and the share links are not known, because the connection cannot show them.
 
-Both must be fixed before the first Contacts record (IGL-42 section 5, condition 2 and 3). The Security Engineer re-checks before wave 1, 2026-11-23.
+Both must be fixed before the first contact record (IGL-42 section 5, conditions 2 and 3).
 
 Constraints:
 
-- **One shared connection.** The board ruled on IGL-30 (2026-10-31) that Airtable runs through one shared company connection in Paperclip, not one token per agent.
-- **What the token can reach.** An Airtable OAuth token acts as the user who granted it, limited by scopes and by the bases or workspaces picked at authorization. The user can grant single bases, whole workspaces or everything, and can change the list later without revoking ([OAuth reference, "Token permissions"](https://airtable.com/developers/web/api/oauth-reference); [help: third-party integrations via OAuth](https://support.airtable.com/articles/6811769763-third-party-integrations-via-oauth-overview); both read 2026-10-31 by the Head of Tech). The granting user's workspace role is the ceiling, not the working level.
-- **What Paperclip can limit.** Grants on a connection are per agent and per tool (Allowed / Ask first / Off). They decide *which tools* an agent may call, not *which base* a tool reaches.
+- **One shared connection for general work.** The board ruled on IGL-30 (2026-10-31) that Airtable runs through one shared company connection in Paperclip, not one token per agent. The board later allowed one narrow exception for contacts (O1-a, below).
+- **What the token can reach.** An Airtable OAuth token acts as the user who granted it, limited by scopes and by the bases or workspaces picked at authorization. The user can grant single bases, whole workspaces or everything, and can change the list later without revoking ([OAuth reference, "Token permissions"](https://airtable.com/developers/web/api/oauth-reference); [help: third-party integrations via OAuth](https://support.airtable.com/articles/6811769763-third-party-integrations-via-oauth-overview); both read 2026-10-31 by the Head of Tech). The granting user's workspace role is the ceiling.
+- **The OAuth grants carry write scopes** `schema.bases:write` and `data.records:write` (accepted in IGL-51 update 2). The base list limits *where* a connection reaches. The policies limit *what* agents can do there.
 
-So the base is the only hard boundary Airtable gives us, and the OAuth resource list is the only place we can enforce it for agents.
+### How the Paperclip policy engine decides
 
-When this ADR was written (2026-10-31), the one shared connection reached every base at owner level, and all 20 agents held it with all 55 tools Allowed ([IGL-54](/IGL/issues/IGL-54), inventory).
+Read in source by the Head of Tech: `server/src/services/tool-access-policy.ts`, `decide()`, upstream commit `b43073d11`.
 
-The OAuth grants still carry the write scopes `schema.bases:write` and `data.records:write`. The base list limits *where* a connection reaches; the block policies (Decision steps 3 and 6) limit *what* agents can do there.
+1. Enabled policies are evaluated in ascending `priority`, then `createdAt`. **The first matching policy returns.** `block` denies, `require_approval` asks, `allow` allows before gateway profiles are consulted.
+2. **Actor conditions can only list agents** (`agentId(s)`, `actorType(s)`). There is no "everyone except" form. A block policy with an agent list is a deny list, and every new hire slips past it.
+3. **Policies can match tool arguments** (`conditions.arguments.fieldIn`, `fieldEquals`, `fieldMatches`). This corrects IGL-51 update 4, which said a block policy cannot match a base or table. That is true of the 5 existing policies, not of the engine.
+4. **Installs and native gateway profiles are not a boundary.** Every agent gets a profile that lists all tools of a connection, and profiles cannot deny. This was found on 2026-11-01 in the first IGL-63 run.
+
+The source tree may differ from the deployed server. Assertions A3 to A6 prove the behaviour live.
 
 ## Options
 
-- **A: separate contacts base, excluded from the shared connection.** Move Contacts and Outreach log into a new base "Design-partner contacts". The pipeline base keeps Teams, RunWeeks, Findings and FixPRs. The link is the Teams record ID, stored as plain text. The shared connection is re-authorized with individual bases only, and the contacts base is never on that list.
-- **B: one base, lower-role connection.** Keep all tables in one base. Agents that do not need Contacts use a second connection that belongs to an Airtable user with a lower role. Field and table edit permissions (paid plans) restrict writes, not reads.
-- **Do nothing.** Keep one base and one owner-level connection that reaches every base. Rely on the rule in `tools-and-data.md` that each agent only touches its own tables.
+### Where contacts live
+
+- **A: separate contacts base that the general connection cannot reach.** Contacts and Outreach log move to a new base. The pipeline base keeps Teams, RunWeeks, Findings and FixPRs. The link is the Teams record ID as plain text.
+- **B: one base, lower-role connection.** All tables in one base. Agents that do not need contacts use a second connection that belongs to an Airtable user with a lower role. Field and table edit permissions (paid plans) restrict writes, not reads.
+- **Do nothing.** One base, one owner-level connection. Rely on the rule in `tools-and-data.md` that each agent only touches its own tables.
+
+### How the contacts path is enforced
+
+- **E1: deny list** (the first, deferred design). Block policy `6d7dbd39` on the contacts connection lists every agent except Head of Customers and Head of Product. Each new hire must be added.
+- **E2: allow-list, then a catch-all block** (this revision). Allow policies name the two agents. A block policy with no actor condition comes after them and catches everyone else.
+- **E3: argument match as the boundary.** Block calls whose arguments name the contacts base or tables, on a single connection.
 
 ## Evaluation
 
@@ -68,138 +74,257 @@ The template weights are changed for this ADR. It is an access decision, not a t
 | Lock-in risk | 5% | 3 | 3 | 3 |
 | Weighted total | | **4.05** | 2.60 | 3.50 |
 
-- Security posture: A puts Contacts out of the token's reach, so a prompt-injected agent cannot read it whatever tool it holds. B still lets every agent on the lower-role connection *read* Contacts, because Airtable cannot hide a table inside a base; the review calls B weaker than A. Do nothing leaves F1 open.
-- Fit with IGL-30: A keeps one shared connection for all normal work. The only second connection is the narrow exception in O1, which the board chose. B is a second connection for the general case, which is what the board ruled against. Do nothing fits the ruling exactly.
-- Agent fit: in A, agents work with a Teams record ID across two bases, a simple and common pattern. B is the same for agents. Do nothing needs no change.
-- Cost of ownership: A adds a base, a re-authorization, and a manual step for every new base. B adds a second connection to run and maybe a paid seat. Do nothing costs nothing.
-- Data integrity: in A the Team key is plain text, so Airtable does not stop a wrong or orphaned key. B and do nothing keep the linked-record field.
-- Lock-in: the same for all three. Everything stays in Airtable.
+- Security posture: A puts contacts out of the general token's reach, so a prompt-injected agent cannot read them whatever tool it holds. B still lets every agent on the lower-role connection *read* contacts, because Airtable cannot hide a table inside a base. Do nothing leaves F1 open.
+- Fit with IGL-30: A keeps one shared connection for all normal work, plus the narrow exception the board chose (O1-a). B is a second connection for the general case, which the board ruled against.
+- Agent fit: in A, agents work with a Teams record ID across two bases, a simple and common pattern.
+- Cost of ownership: A adds a base, a workspace, a second connection and a manual step for every new base. B adds a second connection and maybe a paid seat.
+- Data integrity: in A the Team key is plain text, so Airtable does not stop a wrong or orphaned key.
 
-The table informs the decision; it does not make it. Do nothing scores second only because it costs nothing, and it fails a hard condition: IGL-42 section 5 does not allow personal data in the base while F1 is open.
+Do nothing scores second only because it costs nothing, and it fails a hard condition: IGL-42 section 5 does not allow personal data in a reachable base while F1 is open.
+
+Enforcement, compared on the one property that decides it, which is what happens to an agent nobody thought of:
+
+| | E1: deny list | E2: allow-list + catch-all block | E3: argument match |
+| --- | --- | --- | --- |
+| New hire | **gets full access** until someone adds them | denied by default | depends on the argument the agent passes |
+| Happened already | yes: Reviewer Terra `5a820146` and Reviewer Opus `6fe7567c` were hired after the policies and are in neither deny list (`6d7dbd39`, `fd2ea28c`) | no | not used |
+| Weakness | needs a step at every hire, and the step was missed | none found for this case | read tools accept table *names* (`list_records_for_table.tableId` takes a name or an ID), so a match on IDs can be bypassed |
+
+E1 would have given both reviewers full access to contacts if the old policies had been re-enabled as they are. E2 removes that failure mode instead of patching the list. E3 is a guard, not a boundary; this ADR uses it for one narrow case where the tool schema forces IDs (policy P1).
 
 ## Decision
 
-**Option A.** The OAuth resource list enforces the boundary. Decided by the Head of Tech on [IGL-51](/IGL/issues/IGL-51#document-decision).
+**Option A with enforcement E2.** Decided by the Head of Tech on [IGL-71](/IGL/issues/IGL-71#document-design). Applies from the trigger.
 
-1. **Two bases.**
-   - "Design-partner pipeline" (`appwLmvOxuSEuayfv`): Teams, RunWeeks, Findings, FixPRs. No names of people.
-   - "Design-partner contacts" (new): Contacts, Outreach log.
-   - The link is the Teams record ID, stored as plain text. No linked-record field crosses bases (Airtable cannot do that).
-2. **The general connection does not reach the contacts base.** Its OAuth resource access is set to **individual bases only**: Design-partner pipeline, Decision log, Forecasts, and later non-personal bases, added one at a time. Not "all workspaces", not the workspace "Iglo Labs" as a whole, and never the contacts base. A new base is unreachable until a human adds it. That is the review step we want.
-3. **No connection is used at owner level for normal work (F1).** The board kept one connection for general work, so the resource scope above plus a tool policy per agent replaces a lower-role account. Agent-Ops (owner of connections) sets the policy on **every** Airtable connection:
-   - **Off for every agent:** `delete-table`, `delete-automation`, `delete-interface`, `delete-page`, `publish-form`, `publish-interface`, `create-automation`, `update-automation`, `test-automation-webhook-trigger`, `create-base`. Publishing can expose data to the public, and automations can send data out (webhook, email). These are setup actions for a human or a one-off grant.
-   - **`delete-records-for-table`:** Ask first, and only for the record owner by role (the delete-by step in IGL-42 F3).
-   - **Schema tools** (`create-table`, `create-field`, `update-field`, `update-table`): only for the agent that builds that base, removed when the build is done.
-   - **Record tools:** only for agents named as writers or readers in `tools-and-data.md`.
-   - **Owner role** stays with the human admin login and is used for setup only.
-4. **Human collaborators** on the contacts base: only the people who need it. No shared view links, no published forms or interfaces, on either base.
-5. **Admin check (F2).** A human with the Airtable admin login records in IGL-51: the plan, the collaborators per workspace and base, every share link, published form and published interface (expected: none), and the bases on the Paperclip OAuth grant.
+### 1. Bases and workspaces
 
-6. **The contacts base has its own connection (O1-a, see below).** It reaches the contacts base only. Only Head of Customers (records read and write) and Head of Product (records read) may use it. **The control is block policy `6d7dbd39`:** every tool on the contacts connection is Off for every agent except those two. Installs and native gateway profiles are not a boundary in Paperclip: every agent gets a profile that lists all tools of a connection, and profiles cannot deny. Only block policies are checked on every call. The policy is a deny list, so every newly hired agent must be added to it at hire (step in `tools-and-data.md`).
+- **"Design-partner pipeline"** `appwLmvOxuSEuayfv` keeps Teams, RunWeeks, Findings, FixPRs. No names of people.
+- **"Design-partner contacts"** (new, ID `appK` recorded at step T3) holds `Contacts` and `Outreach log`, with the same fields as the two empty tables in the pipeline base. The link to a team is the Teams record ID as plain text. No linked-record field crosses bases.
+- **The contacts base lives in a separate Airtable workspace, "Iglo Labs Contacts".** Why: it is not known whether General's OAuth grant names individual bases or the whole workspace. Führungs-KPIs is reachable by General but was not on the update 1 list, so either a human added it or the grant covers the workspace. If it covers the workspace, a contacts base created there would be reachable by General with no consent step. A separate workspace makes that impossible either way.
+  - **Not verified:** whether a second workspace costs money on our plan. If it does, the human stops and the Head of Tech takes it to the CEO (new paid service).
+  - **Fallback without cost:** same workspace, but only after the human confirms on the consent screen that General is granted per base. Assertion A1 catches it if that is wrong.
+- **The human creates the base**, empty, in the Airtable UI, in the same browser session as the OAuth consent. Agents do not create it: `create_base` is on the Off-list, and a base created through General could end up inside General's grant.
+- **Head of Customers builds the tables** through `C`, under the temporary schema allow P0. Agent-Ops deletes P0 after the build and before the first record.
 
-Why the boundary is a base and not a tool rule: with one shared connection, any agent that holds a record-read tool can read every table on every base the token reaches. That includes agents that read untrusted partner pages and repos (IGL-41). Tools are not scoped per base, so no tool policy can fix this.
+### 2. Connections and the bases they reach
+
+| Connection | ID | Allowed bases (exact set) | Never |
+| --- | --- | --- | --- |
+| Airtable General | `b9cb271e-5823-449c-9d7c-1b4f07805277`, unchanged | exactly 4: `appicd9N1MuKLR2rR`, `appTQcnuiYBY7PSgM`, `appwKLdDinRAEjkRP`, `appwLmvOxuSEuayfv` | the contacts base |
+| Airtable Contacts | **`C`**: `169a9e32-76e8-4e84-82e4-41edf380dcaf` if it comes back active after the human re-consents it, otherwise the new connection ID | the contacts base `appK` only | every other base |
+
+- Agent-Ops records the final value of `C` (and `appK`) on IGL-71 at step T3, before any policy is changed. From then on, `C` means that ID. Policies are bound to connection IDs (IGL-51 update 1), so Agent-Ops rebinds them in both outcomes.
+- **A base that shows up in General and is not on this list is a failure.** It passes only after the Head of Tech adds it to this table. That is how new bases get reviewed.
+
+### 3. Agents on the contacts path
+
+| Agent | ID | On `C` |
+| --- | --- | --- |
+| Head of Customers | `045f018e-0062-42d2-a2ba-8b4537852c6f` | the 14 read tools, plus `create_records_for_table`, `update_records_for_table`, `create_record_comment`. `delete_records_for_table`: ask first. Nothing else. |
+| Head of Product | `b4e670eb-1d0e-4bd6-a8e1-1fd7664b8240` | the 14 read tools only |
+| Every other agent, **including every future hire** | | all tools denied |
+
+Board answer of 2026-11-01 (O1-a, below). The Security Engineer gets no access (IGL-51 update 2). Their own denied call is the proof (A3).
+
+The 14 read tools: `analyze_table`, `get_record_for_page`, `get_table_schema`, `list_bases`, `list_record_comments`, `list_records_for_page`, `list_records_for_table`, `list_tables_for_base`, `list_views_for_table`, `list_workspaces`, `ping`, `search_bases`, `search_candidate_linked_records`, `search_records`. These are the 55 Airtable tools minus the 36 on the `b63a6dda` Off-list and the 5 record write tools in `fd2ea28c`.
+
+The install list and gateway profiles on `C` are restricted to these two agents for tidiness. **They are not the boundary.** The policies in section 4 are.
+
+### 4. Policies
+
+On `C`, access is an **allow-list followed by a catch-all block with no actor condition.** Because the first match wins, an agent that no allow policy names falls through to the block. New hires are denied by default. The same pattern applies to record writes on General.
+
+| Priority | Policy | Type | Connection | Tools | Actor | Change at trigger |
+| --- | --- | --- | --- | --- | --- | --- |
+| 5 | **P0**, new, temporary | allow | `C` | `create_table`, `create_field`, `update_field`, `update_table` | Head of Customers | create at T4, **delete before the first record** |
+| 10 | `b63a6dda` Off-list | block | General + `C` | the 36 Off tools, unchanged | none (everyone) | replace `169a9e32` with `C` if new; priority 10; enable |
+| 15 | **P1**, new: guard on the old tables | block | General | `create_records_for_table`, `update_records_for_table` | none | condition `arguments.fieldIn.tableId = [tblxqUK94gGMGrTSl, tblQvZJcwSF7cwVNr]` |
+| 20 | **P2**, new | allow | `C` | 14 read + 3 write tools (section 3) | Head of Customers | create |
+| 20 | **P3**, new | allow | `C` | 14 read tools | Head of Product | create |
+| 20 | **P4**, new | allow | General | `create_records_for_table`, `update_records_for_table`, `create_record_comment`, `revert_action` | Chief of Staff `7bc839d7`, Prognostiker `35b2e926`, Head of Customers `045f018e`, Head of Marketing `6686a0a8` | create (same 4 writers as today) |
+| 30 | `793b136f` | require_approval | General | `delete_records_for_table` | the same 4 writers | priority 30; enable |
+| 30 | `9ef41c27` | require_approval | `C` | `delete_records_for_table` | Head of Customers | rebind `169a9e32` → `C`; priority 30; enable |
+| 40 | `6d7dbd39` | block | `C` | **all** (no tool selector) | **none** (delete the agent list) | rebind → `C`; delete the actor condition; priority 40; enable |
+| 40 | `fd2ea28c` | block | General only | the 5 record write tools | **none** (delete the agent list) | remove `169a9e32`; delete the actor condition; priority 40; enable |
+
+Why the order holds:
+
+- The Off-list (10) comes before every allow, so no allow can unlock a delete, publish or automation tool. P0 (5) is the only thing above it, and only for the 4 schema tools, only for Head of Customers, only on `C`, and only during T4.
+- The table guard P1 (15) comes before the writers' allow P4 (20), so no one can write into the two old pipeline tables. Both write tools *require* a `tbl…` ID (schema `pattern: ^tbl[A-Za-z0-9]{14}$`), so a table name cannot get round the guard.
+- The ask-first policies for `delete_records_for_table` (30) come after the allows. The allows don't include delete, so a writer's delete falls through to ask-first, and anyone else's delete hits the block at 40.
+- Head of Product's write attempt on `C` matches nothing until 40, so it is denied. So is `revert_action` by Head of Customers on `C`.
+- Read tools on General match no policy and stay open to every agent. General reaches no personal data.
+
+**Argument matching is a guard, not the base boundary.** The engine can match tool arguments (Context, point 3), and P1 uses it. It is not used to keep contacts apart, because argument names differ per tool and read tools accept table names as well as IDs. The base boundary is enforced by Airtable itself: General's grant does not reach the contacts workspace.
+
+Result: 5 existing policies reused, 4 new permanent ones (P1 to P4), 1 temporary (P0). Agent-Ops updates `tools-and-data.md`: the step "add new hire to `6d7dbd39`" is removed, and the rule becomes "new agents get no Airtable writes and no contacts access unless the Head of Tech adds them to P2, P3 or P4".
+
+### 5. The two empty tables in the pipeline base
+
+They stay in place and empty. Nothing is deleted, so no CEO approval is needed. P1 makes any write into them fail for every agent, so a contact can't land in the old place by mistake. A7 checks that both still have 0 records. Deleting them later needs CEO approval and a human in the Airtable UI. `delete_table` stays on the Off-list with no exception (IGL-51 update 2).
+
+### 6. Human collaborators and admin facts (F2)
+
+- On the contacts base: only the people who need it. No shared view links, no published forms or interfaces, on any base.
+- **Owner role** stays with the human admin login and is used for setup only.
+- A human with the Airtable admin login records on IGL-71 at step T2: the collaborators per workspace and base, every share link, published form and published interface (expected: none). A10 reads this.
 
 ### O1: who reaches the contacts base (decided)
 
-Option A left one question for the board, asked on [IGL-51](/IGL/issues/IGL-51). **The board picked O1-a, the exception connection, on 2026-11-01.** This is a narrow exception to the IGL-30 ruling: two Airtable connections in total, not one per agent.
-
-What was weighed:
+**The board picked O1-a on 2026-11-01:** a second connection, limited to the contacts base, for Head of Customers and Head of Product only. This is a narrow exception to the IGL-30 ruling: two Airtable connections in total, not one per agent.
 
 | | O1-a: exception connection (chosen) | O1-b: humans-only entry |
 | --- | --- | --- |
-| What | A second connection, limited to the contacts base only. Granted only to Head of Customers (write) and Head of Product (read). Two connections in total, not one per agent. | No agent touches Contacts. A human types contacts in the Airtable UI. Agents work with Teams record IDs only. |
-| IGL-30 ruling | Narrow exception to the ruling. | Keeps the ruling in full. |
-| Cost | One more connection to run and audit. | Human time for every contact and outreach entry; the Head of Customers cannot run outreach alone. |
+| What | A second connection, limited to the contacts base. Head of Customers (write) and Head of Product (read). | No agent touches contacts. A human types them in the Airtable UI. Agents work with Teams record IDs only. |
+| IGL-30 ruling | Narrow exception. | Keeps the ruling in full. |
+| Cost | One more connection to run and audit. | Human time for every contact and outreach entry; Head of Customers cannot run outreach alone. |
 
-### As built (2026-11-01 morning, no longer exists)
-
-This was the state on the morning of 2026-11-01. It was replaced at about 12:00 UTC by the open state under Current state: the contacts base is deleted and the contacts connection is archived. The table stays as the record of how the decision was first built.
-
-The human did not re-authorize the old connection with fewer bases. They reused it for contacts and created a new one for general work:
-
-| Connection | Paperclip ID | Bases it reaches | Installed for | Block policies |
-| --- | --- | --- | --- | --- |
-| Airtable General (new) | `b9cb271e-5823-449c-9d7c-1b4f07805277` | Design-partner pipeline (`appwLmvOxuSEuayfv`), Decision log, Forecasts | whole company | `b63a6dda`, `fd2ea28c`, `793b136f` |
-| Airtable Design Partner Contacts (the old shared connection, renamed and limited) | `169a9e32-76e8-4e84-82e4-41edf380dcaf` | Design-partner contacts (`appRL6tCPR8sLtSCF`) only | Head of Customers, Head of Product (not a boundary, see step 6) | `b63a6dda`, `fd2ea28c`, `793b136f`, plus `6d7dbd39` (Off for every agent except Head of Customers and Head of Product) |
-
-The Head of Tech verified the base scope of both connections with `list-bases` on 2026-11-01 ([IGL-51](/IGL/issues/IGL-51)). The tool policies did not follow the change, and the install list did not limit the contacts connection; see the first and third risks below. Policy state as of 2026-11-01 ([IGL-51](/IGL/issues/IGL-51) decision document, update 2; [IGL-54](/IGL/issues/IGL-54)).
-
-The diagram below shows the restricted design for the trigger, not the current open state.
+### Diagram (state after the trigger)
 
 ```mermaid
 flowchart LR
-  agents(["Agents<br/>(tool policy per agent)"])
-  hoc(["Head of Customers,<br/>Head of Product"])
+  agents(["All agents<br/>(read on General;<br/>writes only via P4)"])
+  pair(["Head of Customers (P2),<br/>Head of Product (P3, read)"])
+  others(["Every other agent,<br/>incl. future hires"])
   human(["Human admin<br/>(owner, setup only)"])
 
-  shared["Airtable General<br/>b9cb271e, whole company<br/>OAuth: individual bases only"]
-  exc["Airtable Design Partner Contacts<br/>169a9e32, contacts base only"]
+  general["Airtable General<br/>b9cb271e<br/>exactly 4 bases"]
+  conC["Airtable Contacts<br/>C (169a9e32 or new ID)<br/>contacts base only"]
+  block{{"6d7dbd39<br/>catch-all block, priority 40"}}
 
-  subgraph ws["Airtable workspace: Iglo Labs"]
-    pipe[("Design-partner pipeline<br/>Teams, RunWeeks,<br/>Findings, FixPRs")]
-    contacts[("Design-partner contacts<br/>appRL6tCPR8sLtSCF<br/>Contacts, Outreach log")]
-    other[("Decision log, Forecasts,<br/>later non-personal bases")]
+  subgraph ws1["Workspace: Iglo Labs"]
+    pipe[("Design-partner pipeline<br/>appwLmvOxuSEuayfv<br/>Teams, RunWeeks, Findings, FixPRs<br/>+ 2 empty old tables, guarded by P1")]
+    other[("Decision log, Forecasts,<br/>Iglo Labs Führungs-KPIs")]
   end
 
-  agents --> shared
-  shared --> pipe
-  shared --> other
-  hoc -- "O1-a" --> exc
-  exc --> contacts
+  subgraph ws2["Workspace: Iglo Labs Contacts"]
+    contacts[("Design-partner contacts<br/>appK<br/>Contacts, Outreach log")]
+  end
+
+  agents --> general
+  general --> pipe
+  general --> other
+  pair -- "allow, priority 20" --> conC
+  others -. "denied" .-> block
+  conC --> contacts
   human -- "Airtable UI" --> contacts
   contacts -. "Teams record ID as text" .-> pipe
 ```
 
+## Definition: "boundary holds"
+
+The boundary holds when all of A1 to A10 pass. The [IGL-63](/IGL/issues/IGL-63) check runs them ([IGL-70](/IGL/issues/IGL-70)) after T4 and before T6, then weekly and after every Airtable connection change (trigger `cdbaada4`). Every probe that could write uses `update_records_for_table` with a record ID that does not exist (for example `recAAAAAAAAAAAAAA`). If a policy wrongly allows the call, Airtable rejects it and no data changes.
+
+| # | Assertion | How | Pass |
+| --- | --- | --- | --- |
+| A1 | General reaches exactly the 4 bases in Decision section 2 | `list_bases` on General | set equals, no contacts base |
+| A2 | `C` reaches exactly the contacts base | `list_bases` on `C`, run by Head of Product at the Security Engineer's request (IGL-51 update 2) | set equals `[appK]` |
+| A3 | Agents outside the pair are denied on `C` | Security Engineer calls `list_bases` on `C` | `deny_policy_block`, policy `6d7dbd39` |
+| A4 | Off-list holds | Security Engineer calls `list_automations` on General | denied by `b63a6dda` |
+| A5 | Non-writers can't write on General | Security Engineer calls `update_records_for_table` (nonexistent record) on a pipeline table | denied by `fd2ea28c` |
+| A6 | Old tables are guarded | the same probe, targeting `tblxqUK94gGMGrTSl` | denied by P1 |
+| A7 | Old tables are empty | `list_records_for_table` on both | `totalRecordCount` 0 |
+| A8 | Policy structure matches Decision section 4 | `GET /companies/{id}/tools/policies` | the 9 policies enabled with the listed priorities and selectors; P2, P3, P4 name only the listed agents; P3 has only read tools; `6d7dbd39` and `fd2ea28c` have no actor condition; P0 absent |
+| A9 | No enabled Airtable policy points at a dead connection | the same call plus `GET /tools/connections` | every `connectionIds` entry is an active Airtable connection |
+| A10 | Admin facts (F2) recorded by the human | read IGL-71 | collaborators listed; no share links, published forms or interfaces |
+
+A8 and A9 replace "test as every agent" with a structure check, which also catches drift such as the missing reviewers.
+
+If any assertion fails, no record is written. The owner of the failing step fixes it, and T5 runs again.
+
+## Trigger sequence
+
+| Step | Owner | Action |
+| --- | --- | --- |
+| T0 | Head of Customers | Flags the trigger on IGL-71, **by 2026-11-16 at the latest** for wave 1 on 2026-11-23. Later than that is still before the first record. |
+| T1 | Head of Tech | One board card: the human steps in T2 plus the admin facts (F2). |
+| T2 | Human (about 5 min) | Creates the workspace "Iglo Labs Contacts" (or confirms the fallback, Decision section 1) and the empty base. Gives OAuth consent for `C` to that base only. Records the admin facts. |
+| T3 | Agent-Ops | Records `C` and `appK` on IGL-71. Applies Decision section 4 except P0. Restricts the install of `C` to the pair. |
+| T4 | Head of Customers, Agent-Ops | Agent-Ops creates P0. Head of Customers builds the 2 tables. Agent-Ops deletes P0. |
+| T5 | Security Engineer | Runs A1 to A10 and posts the result (IGL-70). |
+| T6 | Head of Customers | Writes the first contact record **only after T5 passes** and the Head of Tech confirms on IGL-71. |
+
+## What this revision changes from the first version
+
+The first version of this ADR (IGL-55, commits up to `220fdca`) was built on the morning of 2026-11-01 and then deferred. This revision keeps option A and O1-a and changes:
+
+| First version | This revision | Why |
+| --- | --- | --- |
+| Contacts base in the "Iglo Labs" workspace | Separate workspace "Iglo Labs Contacts" (fallback: same workspace after per-base consent is confirmed) | It is not known whether General's grant covers the whole workspace |
+| `6d7dbd39` is a deny list of every agent except the pair; add each new hire | Allow policies P2, P3 at 20, then `6d7dbd39` at 40 with no actor condition; no new-hire step | The engine is first match, and actor conditions can't say "everyone except". The deny list already missed Reviewer Terra and Reviewer Opus |
+| `fd2ea28c` with an agent list, on both connections | Allow P4 for the 4 writers at 20, then `fd2ea28c` at 40 with no actor condition, General only | Same reason |
+| "A block policy cannot match a base or table" (IGL-51 update 4) | The engine can match arguments; used only as the guard P1 | Read in source; read tools take table names, so it is not a boundary |
+| Old `Contacts` and `Outreach log` to be moved | Stay in the pipeline base, empty, write-guarded by P1 | Nothing is deleted, so no CEO card |
+| IGL-63 with 3 assertions | A1 to A10 | Structure checks (A8, A9) catch drift that per-agent tests miss |
+
+### As built on 2026-11-01 morning (no longer exists)
+
+Kept as the record of how the first version was built. Replaced at about 12:00 UTC by the open state under Current state.
+
+| Connection | Paperclip ID | Bases it reached | Installed for | Block policies |
+| --- | --- | --- | --- | --- |
+| Airtable General (new) | `b9cb271e-5823-449c-9d7c-1b4f07805277` | Design-partner pipeline, Decision log, Forecasts | whole company | `b63a6dda`, `fd2ea28c`, `793b136f` |
+| Airtable Design Partner Contacts (old shared connection, renamed and limited) | `169a9e32-76e8-4e84-82e4-41edf380dcaf` | Design-partner contacts `appRL6tCPR8sLtSCF` only | Head of Customers, Head of Product (not a boundary) | the same three, plus `6d7dbd39` as a deny list |
+
 ## Evolution
 
-Designed for the current stage: one human admin, one base with personal data, a handful of agents, wave 1 starting 2026-11-23.
+Designed for the current stage: one human admin, one base with personal data, about 20 agents, wave 1 starting 2026-11-23.
 
-Revisit (new ADR) when any of these happens:
+Revisit (new ADR that supersedes this one) when any of these happens:
 
-- **A second base with personal data** is planned. Then the "add bases one at a time" list and the tool policy are no longer enough on their own, and a separate lower-role Airtable account becomes worth its seat.
-- **More than one person** needs owner or creator access to the workspace, so owner is no longer "the human admin, setup only".
+- **A second base with personal data** is planned. Then the per-connection base list and the policies may not be enough on their own, and a lower-role Airtable account becomes worth its seat.
+- **More than one person** needs owner or creator access to a workspace.
 - **The board asks for a lower-role account**, or reverses or widens the IGL-30 ruling.
-
-Also revisit if Airtable adds per-table read permissions inside a base, or if Paperclip grants can be scoped per base. Either one would make option B or a single base viable.
+- **The second workspace costs money** and the CEO declines it, so the same-workspace fallback becomes the design.
+- **The policy engine changes** its evaluation order or gains an "everyone except" actor condition. A3 to A6 or A8 failing on an unchanged policy set is the signal.
+- Airtable adds per-table read permissions inside a base, or Paperclip scopes grants per base. Either would make option B or a single base viable.
 
 ## Consequences
 
 Easier:
-- A prompt-injected or mistaken agent cannot read, export or delete Contacts, whatever tools it holds.
-- New bases are unreachable by default. Adding a base to the grant is the review step.
-- The IGL-42 section 5 condition 2 can be checked: list the bases on the grant.
+
+- A prompt-injected or mistaken agent outside the pair cannot reach contacts, whatever tools it holds: General can't see the base, and `C` denies it.
+- **New hires are denied by default** on `C` and for record writes on General. The hiring step "add to `6d7dbd39`" is gone.
+- New bases are unreachable by default. Adding a base to the list in Decision section 2 is the review step.
+- "Boundary holds" is a fixed list (A1 to A10) that can be run, not a judgement call.
 
 Harder:
-- Two bases to keep consistent. The Team key is plain text, so a deleted team can leave orphaned contacts. The weekly delete-by step (IGL-42 F3) must also clean contacts of deleted teams.
-- Every new non-personal base needs a human to add it to the general connection.
-- Two Airtable connections to run and audit, and every tool policy must exist on both.
-- The contacts block policy is a deny list: every new agent must be added at hire, or it can use the contacts connection.
+
+- Two bases in two workspaces to keep consistent. The Team key is plain text, so a deleted team can leave orphaned contacts. The weekly delete-by step (IGL-42 F3) must also clean contacts of deleted teams.
+- Every new non-personal base needs a human to add it to General and the Head of Tech to add it to the allowed list.
+- Two connections to run and audit. Every policy change must keep the priorities in Decision section 4, because order is the logic.
+- Giving a new agent writes or contacts access is now an explicit change to P2, P3 or P4 by the Head of Tech.
 - Cross-base lookups take more API calls.
 
 Given up:
-- Linked-record fields, rollups and lookups between Teams and Contacts.
-- One connection for everything (the IGL-30 ruling has one narrow exception now).
+
+- Linked-record fields, rollups and lookups between Teams and contacts.
+- One connection for everything (the IGL-30 ruling has one narrow exception).
 
 ## Risks and mitigations
 
 | Risk | Mitigation |
 | --- | --- |
-| **Tool policies are bound to a connection ID.** When a connection is replaced or a new one is added, the policies stay on the old ID and the new connection comes up with every tool Allowed for every agent. **This happened on 2026-11-01:** the new general connection had all 55 tools Allowed for every agent, including `delete-table`, `publish-form` and `create-base` ([IGL-54](/IGL/issues/IGL-54)). | Agent-Ops re-applies the tool policies after any Airtable connection change. The automated check in [IGL-63](/IGL/issues/IGL-63) asserts that every Airtable connection ID is covered by the Off-list policy. |
-| Someone widens a connection's base list ("all workspaces"), and the contacts base is reachable through the general connection without anyone noticing. | Automated check [IGL-63](/IGL/issues/IGL-63) (Security Engineer), weekly in the Tuesday Security Check and after any Airtable connection change: `list-bases` on the general connection returns exactly the allowed list in `tools-and-data.md`, never the contacts base; `list-bases` on the contacts connection returns only `appRL6tCPR8sLtSCF`. |
-| More agents than Head of Customers and Head of Product can use the contacts connection. **This happened on 2026-11-01** (first run of [IGL-63](/IGL/issues/IGL-63)): every agent had a native gateway profile listing all 55 tools of `169a9e32`, and the install list did not restrict calls. Cause: profiles list every tool of a connection and cannot deny; only block policies are checked on every call. | Block policy `6d7dbd39` (Off for every agent except Head of Customers and Head of Product), set by Agent-Ops ([IGL-54](/IGL/issues/IGL-54)). New-hire step in `tools-and-data.md`: add the agent to the policy at hire. IGL-63 assertion 3b proves it with a denied call from an agent outside the two. |
-| Tool policy drifts: a new agent gets a connection with every tool Allowed. | Agent-Ops records which agents hold each connection and their tool grants in `tools-and-data.md`; the IGL-63 check covers the Off-list on every connection. |
+| **Policies are bound to a connection ID.** When a connection is replaced, they stay on the old ID and the new connection comes up with every tool allowed. This happened on 2026-11-01 ([IGL-54](/IGL/issues/IGL-54)). | Agent-Ops records `C` at T3 before changing any policy, then rebinds. A9 fails if any enabled policy points at a dead connection. |
+| A new agent is hired and nobody updates a list. This happened with the deny lists: Reviewer Terra and Reviewer Opus. | Allow-list plus catch-all block (Decision section 4). A3 and A5 prove it with a denied call from an agent outside the lists; A8 checks that the blocks have no actor condition. |
+| Someone widens a connection's base list, or the grant covers a whole workspace. | Contacts in a separate workspace. A1 and A2 compare the base sets exactly, weekly and after every connection change. |
+| Policy order is changed by mistake (for example an allow moved above the Off-list). | A8 checks every priority and selector against Decision section 4. |
+| P0 stays after the table build and leaves schema tools open on `C`. | P0 is deleted before the first record (T4). A8 fails if P0 exists. T6 waits for T5. |
+| The deployed server behaves differently from the source read on `b43073d11`. | A3 to A6 test the behaviour live, not the source. |
+| Argument match in P1 is bypassed. | The two write tools require a `tbl…` ID by schema, so a table name is rejected. P1 is a guard only; the old tables also stay empty (A7). |
+| A contact is written into the old tables in the pipeline base. | P1 blocks writes for every agent. A7 checks both stay at 0 records. |
+| Personal data leaks into the pipeline base through free text (a name in `Independence note`, `Source`, `Reply`). | IGL-42 rule F4 and condition 7: no names of people in Teams, RunWeeks, Findings, FixPRs. |
 | Orphaned contacts after a team is deleted. | The weekly delete-by step also deletes contacts whose Team key no longer exists. |
-| Personal data leaks into the pipeline base through free text (a name in `Independence note`, `Source`, `Reply`). | IGL-42 rules F4 and condition 7 (no names of people in Teams, RunWeeks, Findings, FixPRs). |
 
 ## Cost impact
 
-No new Airtable seat: the decision avoids a second Airtable account. The new base sits in the existing workspace; that the plan's base limit allows it is not verified here and is part of the F2 admin check. Cost drivers: API calls (cross-base lookups count against the plan limit), and the second (contacts) connection to run and audit.
+No new Airtable seat. **Not verified:** whether a second workspace costs money on our plan. If it does, it is a new paid service and needs CEO approval; the same-workspace fallback costs nothing. Other cost drivers: API calls (cross-base lookups count against the plan limit) and a second connection to run and audit.
 
 ## Security review
 
-Required: the decision touches customer personal data and the access of an external service. Input review: [IGL-42 security review](/IGL/issues/IGL-42#document-security-review) (F1, F2, sections 1 and 5). The Security Engineer re-checks the implemented state before wave 1 (2026-11-23), as planned in IGL-42 section 5.
+Required: the decision touches customer personal data and the access of an external service. Input: [IGL-42 security review](/IGL/issues/IGL-42#document-security-review) (F1, F2, sections 1 and 5). The Security Engineer runs A1 to A10 at T5 ([IGL-70](/IGL/issues/IGL-70)) before the first contact record. Review of this revision by the Security Engineer is requested on the PR.
 
 ## Diagrams
 
-- `docs/architecture/context.md` is not changed. It does not list Airtable: it shows the Fram CI runtime only (added in the ADR-004 PR, not yet on `main`).
-- The diagram of the two bases and the connections is in this ADR, under Decision.
+- `docs/architecture/context.md` is not changed. It shows the Fram CI runtime only and does not list Airtable.
+- The diagram of the workspaces, bases, connections and the catch-all block is in this ADR, under Decision.
