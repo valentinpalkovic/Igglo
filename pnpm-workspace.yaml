@@ -6,5 +6,5 @@ packages:
 # One version for tools that every package declares (ADR-001: each package
 # declares what it imports, checked by dependency-cruiser).
 catalog:
-  "@types/node": ^24.19.2
+  "@types/node": ^26.6.5
   vitest: ^5.0.5
