@@ -1,10 +1,10 @@
 # ADR-008: Airtable access boundary for personal data
 
 Status: accepted, revision 2. Takes effect at the wave 1 trigger. Until T5 passes, D-2026-11-01-01 applies to everything outside this decision. Revision 2 is in force when the Head of Tech merges it.
-Date: 2026-10-31, updated 2026-11-01 (board decision on O1; CEO deferral D-2026-11-01-01; boundary design from IGL-71, revision 4; **revision 2 of this ADR: single connection, from IGL-71 design revision 5**)
+Date: 2026-10-31, updated 2026-11-01 (board decision on O1; CEO deferral D-2026-11-01-01; boundary design from IGL-71, revision 4; **revision 2 of this ADR: single connection, decided in IGL-71 design revision 5, applied state from revision 6**)
 Owner: Architekt
 Approver: Head of Tech
-Issues: [IGL-55](/IGL/issues/IGL-55) (first version), [IGL-74](/IGL/issues/IGL-74) (revision 1), [IGL-83](/IGL/issues/IGL-83) (revision 2, this one). Source of the decision: [IGL-71 design document](/IGL/issues/IGL-71#document-design), **revision 5** (2026-11-01, 13:05 UTC), which revises the [IGL-51 decision](/IGL/issues/IGL-51#document-decision), decisions 1 to 3 and update 4. The reasons for revision 5 are in design section 0a.
+Issues: [IGL-55](/IGL/issues/IGL-55) (first version), [IGL-74](/IGL/issues/IGL-74) (revision 1), [IGL-83](/IGL/issues/IGL-83) (revision 2, this one). Source of the decision: [IGL-71 design document](/IGL/issues/IGL-71#document-design), **revision 6** (2026-11-01, 13:25 UTC). Revision 6 has the same decision as revision 5 (13:05 UTC) and adds the applied state from step T3. The design revises the [IGL-51 decision](/IGL/issues/IGL-51#document-decision), decisions 1 to 3 and update 4. The reasons for the single connection are in design section 0a.
 
 ## Where the live identifiers are
 
@@ -49,7 +49,7 @@ Verified by the Head of Tech with read-only calls on 2026-11-01:
 3. **`C` was never created.** The old contacts connection is archived, and no other Airtable connection exists. A separate connection would need a new human OAuth step, and nothing shows that its consent screen would limit it to one base.
 4. **`baseId` is a reliable policy key.** Every Airtable tool that reads or writes data inside a base **requires** `baseId` with schema `pattern: ^app[A-Za-z0-9]{14}$`. This covers the record, table, schema, comment, page, form, automation and revert tools. A base name is not accepted. The 12 tools without `baseId` are `list_workspaces`, `list_bases`, `search_bases`, `ping`, `list_secrets`, `list_external_accounts`, `fetch_automation_input_data`, `get_create_automation_instructions`, `describe_page_element`, `describe_page_type`, `get_custom_element_documentation` (none of them return base data) and `create_base` (Off-list, takes `workspaceId`).
 
-Design revision 5 lists 9 of these. The QA review of PR #10 found the other 3 (`describe_page_element`, `describe_page_type`, `get_custom_element_documentation`), and the Architekt confirmed them in the tool schemas on 2026-11-01. They take only `elementType`, `pageType` or `topics` and return static JSON schemas or SDK documentation, not base data. The Head of Tech confirms this classification on IGL-71.
+Design revisions 5 and 6 list 9 of these. The QA review of PR #10 found the other 3 (`describe_page_element`, `describe_page_type`, `get_custom_element_documentation`), and the Architekt confirmed them in the tool schemas on 2026-11-01. They take only `elementType`, `pageType` or `topics` and return static JSON schemas or SDK documentation, not base data. The Head of Tech confirms this classification on IGL-71 and updates A8 in design section 6, which still says 9.
 
 Revision 1 said that argument matching is "a guard, not a boundary". That was about `tableId`, which read tools also accept as a table name. It does not apply to `baseId`.
 
@@ -64,7 +64,7 @@ Read in source by the Head of Tech: `server/src/services/tool-access-policy.ts`,
 
 The source tree may differ from the deployed server. Assertions A3 to A6 prove the behaviour live.
 
-**Open (Agent-Ops, step T3):** does an `arguments` condition match when the argument is absent? If it did, the contacts catch-all block (14) would deny `list_bases` and the other base-less tools for everyone. That fails safe, but it would break other work. Agent-Ops reports the answer on IGL-71.
+**Answered at T3: an `arguments` condition does not match a call that lacks the argument.** Agent-Ops reported this on IGL-71 at 13:16 UTC, and the Head of Tech confirmed it at 13:22 UTC (design revision 6). So the base-less tools are not affected by the contacts policies. The security consequence is in [Decision section 7](#7-one-layer-instead-of-two): a call that leaves out `baseId` is not matched by the contacts catch-all block.
 
 ## Options
 
@@ -133,7 +133,7 @@ E1 would have given both reviewers full access to contacts if the old policies h
 
 ## Decision
 
-**Option A, reached through General only (K2), with enforcement E2 keyed on `baseId`.** Decided by the Head of Tech on [IGL-71](/IGL/issues/IGL-71#document-design), revision 5. Applies from the trigger.
+**Option A, reached through General only (K2), with enforcement E2 keyed on `baseId`.** Decided by the Head of Tech on [IGL-71](/IGL/issues/IGL-71#document-design), revision 5; applied state in revision 6. Applies from the trigger.
 
 ### 1. Bases and workspaces
 
@@ -192,7 +192,11 @@ Five existing policies are reused, named here by role. Two of them, the contacts
 
 The existing ask-first policy for `analyze_table` (priority 50) is not used and stays disabled. A8 checks it.
 
-**Condition form.** Use `fieldEquals` on `baseId` with the contacts base ID. If the engine supports a case-insensitive `fieldMatches`, use an anchored, case-insensitive match on the same ID for the contacts catch-all block instead, so a wrong-case ID cannot slip past the block. Either way, A3c probes it.
+**Condition form (as applied at T3, deliberate).**
+
+- **The allows (P0, P2, P3) and the contacts delete ask-first** use `fieldEquals` on `baseId` with the contacts base ID. They are exact-case.
+- **The contacts catch-all block** uses `fieldMatches` with a case-insensitive regex on the same ID. `fieldMatches` takes a plain regex with no flags, so the regex spells out case-insensitivity with anchored character classes (`^…$`). The regex contains the base ID, so it is on IGL-71 (design section 4), not here.
+- **Why the two forms differ:** a contacts base ID in the wrong case misses every allow and hits the block. That fails safe, even for the pair. This is part of the boundary on purpose. Do not change the block to `fieldEquals`, and do not make the allows case-insensitive. A3c checks it.
 
 Why the order holds (first match wins):
 
@@ -220,10 +224,12 @@ They stay in place and empty. Nothing is deleted, so no CEO approval is needed. 
 
 **The consequence of K2:** Airtable no longer enforces the boundary. With `C`, there would have been 2 layers, the OAuth grant and the policies. Now the policies are the only layer. If the contacts catch-all block fails open, or a stray allow sits above it, **every agent on General** can read the contacts base, not one agent. Accepted by the Head of Tech on 2026-11-01 (IGL-71 section 8).
 
+**The block only covers calls that carry `baseId`.** An `arguments` condition does not match a call that lacks the argument (answered at T3, Context). So a call that leaves out `baseId` is **not** matched by the contacts catch-all block. The block covers all base data only because every tool that reaches base data *requires* `baseId` (the A8 schema invariant). The block does not cover "every call on the contacts base" by itself: it covers every call that names the contacts base in `baseId`, and the tool schemas make sure that is every call that can reach its data.
+
 Compensating checks:
 
-- **A3 to A3d** probe the block live on every weekly run: a base-scoped read by an agent outside the pair (A3), other read paths including a table *name* (A3b), a wrong-case base ID (A3c), and a write by an agent with read-only access (A3d).
-- **The A8 schema invariant** re-reads the Airtable tool schemas on every run. Every tool except the 12 base-less tools (Context, 0a point 4) must require `baseId` with `^app[A-Za-z0-9]{14}$`. A new tool without `baseId` fails A8 until the Head of Tech classifies it. This is what keeps the `baseId` key complete.
+- **A3 to A3d** probe the block live on every weekly run: a base-scoped read by an agent outside the pair (A3), other read paths including a table *name* (A3b), a wrong-case base ID that must hit the case-insensitive block (A3c), and a write by an agent with read-only access (A3d).
+- **The A8 schema invariant** re-reads the Airtable tool schemas on every run. Every tool except the 12 base-less tools (Context, 0a point 4) must require `baseId` with `^app[A-Za-z0-9]{14}$`. A new tool without `baseId` fails A8 until the Head of Tech classifies it. Because the block does not match a call without `baseId`, this invariant is what makes the block cover all base data.
 - **The catch-all block has no actor condition**, so a new hire is denied by default.
 - **A8 also checks the policy structure:** priorities, selectors, conditions, no stray allows, nothing below 10.
 
@@ -239,7 +245,7 @@ Compensating checks:
 | IGL-30 ruling | As chosen, a narrow exception (a second connection). As built in revision 2, no exception: one connection. | Keeps the ruling in full. |
 | Cost | Policies on General to run and audit. | Human time for every contact and outreach entry; Head of Customers cannot run outreach alone. |
 
-The board's O1-a named a second connection as the way to do it. Revision 2 keeps who has access and changes how it is enforced: policies on General instead of a second connection (IGL-71 revision 5).
+The board's O1-a named a second connection as the way to do it. Revision 2 keeps who has access and changes how it is enforced: policies on General instead of a second connection (IGL-71 revisions 5 and 6).
 
 ### Diagram (state after the trigger)
 
@@ -289,7 +295,7 @@ The exact IDs each probe uses are in the IGL-63 procedure and on IGL-71. This ta
 | A2 | The pair can use the contacts base | Head of Product calls `list_tables_for_base` on the contacts base, at the Security Engineer's request | allowed by P3; the table set matches Decision section 1 |
 | A3 | Others are denied on the contacts base | Security Engineer calls `list_tables_for_base` on the contacts base | `deny_policy_block`, by the contacts catch-all block |
 | A3b | Other read paths on the contacts base are denied too | Security Engineer calls `search_records` on the contacts base with the table **name** `Contacts`, and `list_records_for_table` on the contacts base | both denied by the contacts catch-all block |
-| A3c | A wrong-case base ID gets no data | Security Engineer calls `list_tables_for_base` with the contacts base ID in lower case | denied by a policy, or rejected by Airtable as an unknown base. **Fail** only if it returns tables |
+| A3c | A wrong-case base ID hits the block | Security Engineer calls `list_tables_for_base` with the contacts base ID in lower case | `deny_policy_block`, by the contacts catch-all block. Anything else is a **fail**, including "rejected by Airtable as an unknown base": that means the case-insensitive regex did not match |
 | A3d | An agent without write access to the contacts base can't write into it | Head of Product calls `update_records_for_table` (nonexistent record) on the contacts base, at the Security Engineer's request | denied by the contacts catch-all block |
 | A4 | Off-list holds | Security Engineer calls `list_automations` on General | denied by the Off-list block |
 | A5 | Non-writers can't write on General | Security Engineer calls `update_records_for_table` (nonexistent record) on a pipeline table **other than** the 2 old tables | denied by the General write block |
@@ -312,7 +318,7 @@ Progress on each step is recorded on [IGL-71](/IGL/issues/IGL-71#document-design
 | T0 | Head of Customers | Flags the trigger on IGL-71. Done on 2026-11-01. |
 | T1/T2 | Head of Tech, human | One board card; the human creates the workspace and the empty contacts base and records the admin facts (F2). Done on 2026-11-01. |
 | ~~T2b~~ | — | Dropped in revision 2 (Context, 0a points 1 and 2). |
-| T3 | Agent-Ops | Applies Decision section 4 except P0. Reports whether an `arguments` condition matches an absent argument (Context, policy engine). |
+| T3 | Agent-Ops | Applies Decision section 4 except P0. Applied on 2026-11-01; the IDs and state are in IGL-71 design revision 6. Answered: an `arguments` condition does not match an absent argument (Context, policy engine). |
 | T4 | Head of Customers, Agent-Ops | Agent-Ops creates P0. Head of Customers builds the 2 tables in the contacts base. Agent-Ops deletes P0. |
 | T5 | Security Engineer | Runs A1 to A10 (with A3b to A3d) and posts the result (IGL-70), by 2026-11-16. |
 | T6 | Head of Customers | Writes the first contact record **only after T5 passes** and the Head of Tech confirms on IGL-71. Planned for 2026-11-23. |
@@ -321,7 +327,7 @@ Nobody writes to the contacts base until T5 passes.
 
 ## What revision 2 changes from revision 1
 
-Revision 1 ([IGL-74](/IGL/issues/IGL-74), merged as `f07895b`) recorded IGL-71 design revision 4. Revision 2 records design revision 5.
+Revision 1 ([IGL-74](/IGL/issues/IGL-74), merged as `f07895b`) recorded IGL-71 design revision 4. Revision 2 records design revision 5 (the decision) and revision 6 (the applied state).
 
 | Revision 1 | Revision 2 | Why |
 | --- | --- | --- |
@@ -389,7 +395,7 @@ Revisit (new ADR that supersedes this one) when any of these happens:
 - **A human restricts General's grant**, for example to the "Iglo Labs" workspace. Then the optional second layer (a separate connection for the contacts base, Decision section 7) becomes possible. Optional; nobody waits for it.
 - **A second base with personal data** is planned. Then one `baseId` condition per base may not be enough on its own, and a lower-role Airtable account becomes worth its seat.
 - **The A8 schema invariant fails:** a tool that reaches base data stops requiring an `app…` `baseId`, or the write tools stop requiring a `tbl…` `tableId`. Then the contacts block or P1 can be bypassed, and the policies need a new design.
-- **The policy engine changes** its evaluation order, gains an "everyone except" actor condition, or Agent-Ops finds at T3 that an `arguments` condition matches an absent argument. A3 to A6 or A8 failing on an unchanged policy set is the signal.
+- **The policy engine changes** its evaluation order, gains an "everyone except" actor condition, changes how `fieldMatches` reads a regex, or changes how an `arguments` condition treats an absent argument (today: no match, answered at T3). A3 to A6 or A8 failing on an unchanged policy set is the signal.
 - **More than one person** needs owner or creator access to a workspace.
 - **The board asks for a lower-role account**, or reverses or widens the IGL-30 ruling.
 - Airtable adds per-table read permissions inside a base, or Paperclip scopes grants per base. Either would make option B or a single base viable.
@@ -426,9 +432,8 @@ Given up:
 | Risk | Mitigation |
 | --- | --- |
 | **The policies are the only layer.** If the contacts catch-all block fails open, or a stray allow sits above it, every agent on General can read contacts. | A3 to A3d probe the block live every week. A8 checks priorities, selectors and conditions, fails on any other enabled allow that matches General (also with no connection selector), and fails on any matching policy below priority 10. Accepted by the Head of Tech (Decision section 7). |
-| A tool that reaches base data does not require `baseId` in `app…` form, now or after an update, so a call can reach the contacts base without matching the condition. | A8 schema invariant: every tool except the 12 base-less tools must require `baseId` with `^app[A-Za-z0-9]{14}$`; a new tool without `baseId` fails until classified. |
-| A wrong-case base ID slips past an exact `fieldEquals` match. | Use a case-insensitive `fieldMatches` on the block if the engine supports it. A3c probes it either way and fails only if tables come back. |
-| An `arguments` condition matches when the argument is absent, so the contacts block denies the base-less tools for everyone. | Fails safe. Agent-Ops checks it at T3 and reports on IGL-71. If it does match, this ADR is revisited (Evolution). |
+| A tool that reaches base data does not require `baseId` in `app…` form, now or after an update. An `arguments` condition does not match a call without the argument (answered at T3), so such a call reaches the contacts base without matching the contacts catch-all block. | A8 schema invariant, which is what makes the block cover all base data: every tool except the 12 base-less tools must require `baseId` with `^app[A-Za-z0-9]{14}$`; a new tool without `baseId` fails until classified. |
+| A wrong-case base ID slips past an exact `fieldEquals` match. | The contacts catch-all block uses a case-insensitive, anchored `fieldMatches` regex (Decision section 4); the allows stay exact-case, so a wrong-case ID misses them and hits the block. A3c passes only on a deny by the block. |
 | The contacts base is copied or moved and gets a new ID outside the policies. | Forbidden (Decision section 1). A1 fails on a sixth base in General. |
 | **Policies are bound to a connection ID.** When a connection is replaced, they stay on the old ID and the new connection comes up with every tool allowed. This happened on 2026-11-01 ([IGL-54](/IGL/issues/IGL-54)). | Agent-Ops removes the archived connection from every policy at T3. A9 fails if any enabled policy names an inactive connection, or if a second Airtable connection is active. |
 | A new agent is hired and nobody updates a list. This happened with the deny lists: Reviewer Terra and Reviewer Opus. | Allow-list plus catch-all block (Decision section 4). A3 and A5 prove it with a denied call from an agent outside the lists; A8 checks that the blocks have no actor condition. |
