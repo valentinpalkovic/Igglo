@@ -19,6 +19,8 @@ concurrency:
 
 jobs:
   lint:
+    # Not "lint": that name is the required CI check from ci.yml.
+    name: workflow-lint
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:

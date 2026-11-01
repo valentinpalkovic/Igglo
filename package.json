@@ -10,12 +10,14 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "test:scripts": "node --test 'scripts/*.test.mjs'",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "depcruise": "depcruise \"packages/*/src\" apps fixtures --config .dependency-cruiser.cjs",
     "workflow-pins": "node scripts/check-workflow-pins.mjs",
-    "check": "pnpm build && pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm depcruise"
+    "forbidden-paths": "node scripts/check-forbidden-paths.mjs",
+    "check": "pnpm build && pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm test:scripts && pnpm depcruise && pnpm forbidden-paths"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

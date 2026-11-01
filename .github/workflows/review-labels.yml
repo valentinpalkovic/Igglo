@@ -1,0 +1,55 @@
+# Review gate 3 (handbook, Code review): path-based review routing.
+# Agents act through a GitHub App and have no user accounts, so CODEOWNERS
+# cannot name them. This workflow adds needs-architekt / needs-security;
+# the QA Engineer reads the labels and requests the Architekt or the
+# Security Engineer. Rules and tests: scripts/review-labels.mjs.
+# Labels are only added, never removed (QA or a human may add them by hand).
+# On fork PRs GITHUB_TOKEN is read-only, so labelling fails there; QA then
+# applies the labels by hand. pull_request_target is not used (ADR-006).
+name: Review labels
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  label:
+    name: review-labels
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    defaults:
+      run:
+        # Explicit bash runs with -eo pipefail, so a failing label script
+        # fails the job instead of yielding an empty label list.
+        shell: bash
+    steps:
+      # The default ref is the PR merge commit; its first parent is the base.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Compute labels
+        id: labels
+        run: |
+          labels="$(node scripts/review-labels.mjs HEAD^1 HEAD | paste -sd, -)"
+          echo "labels=$labels" >> "$GITHUB_OUTPUT"
+          echo "Labels: ${labels:-none}"
+
+      - name: Add labels
+        if: steps.labels.outputs.labels != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          LABELS: ${{ steps.labels.outputs.labels }}
+        run: gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --add-label "$LABELS"
