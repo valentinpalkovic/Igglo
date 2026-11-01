@@ -1,5 +1,17 @@
+# Dependencies, build output and tool caches. scripts/check-forbidden-paths.mjs
+# fails CI if any of these is committed anyway; keep both lists in sync.
 node_modules/
+.pnpm-store/
 dist/
-.turbo/
+build/
+storybook-static/
 coverage/
+.turbo/
+.nx/
+.cache/
+.eslintcache
+playwright-report/
+test-results/
+blob-report/
 *.tsbuildinfo
+.DS_Store
