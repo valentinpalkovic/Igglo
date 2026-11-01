@@ -1,0 +1,64 @@
+# Enables auto-merge on Dependabot PRs for patch and minor updates (ADR-006).
+# It never merges directly: GitHub merges only after the required checks of the
+# `main` ruleset pass. No checkout and no PR code runs here.
+# Major updates get one comment asking for manual review.
+name: Dependabot auto-merge
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  automerge:
+    name: enable auto-merge or request review
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_URL: ${{ github.event.pull_request.html_url }}
+      PR_NODE_ID: ${{ github.event.pull_request.node_id }}
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - name: Enable auto-merge (squash)
+        if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
+        env:
+          QUERY: |
+            mutation($id: ID!) {
+              enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: SQUASH}) {
+                pullRequest { number autoMergeRequest { enabledAt mergeMethod } }
+              }
+            }
+        run: |
+          if ! output=$(gh api graphql -f query="$QUERY" -f id="$PR_NODE_ID" 2>&1); then
+            echo "$output"
+            echo "::error title=Auto-merge not enabled::GitHub refused to enable auto-merge on $PR_URL. Either 'Allow auto-merge' is off in the repo settings, or the PR is already mergeable because no 'main' ruleset requires the checks 'lint, typecheck, boundaries, test, build'. This job never merges directly. See ADR-006, follow-ups."
+            exit 1
+          fi
+          echo "$output"
+
+      - name: Ask for manual review of a major update
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        env:
+          MARKER: "<!-- dependabot-automerge:manual-review -->"
+        run: |
+          already_commented=$(gh pr view "$PR_URL" --json comments --jq 'any(.comments[].body; contains("dependabot-automerge:manual-review"))')
+          if [ "$already_commented" = "true" ]; then
+            echo "Manual-review comment already present."
+            exit 0
+          fi
+          gh pr comment "$PR_URL" --body "$MARKER
+          This is a semver-major update. It is not auto-merged and needs a manual review."
