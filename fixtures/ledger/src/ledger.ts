@@ -16,8 +16,24 @@ export type EnumOrder = "declared" | "reversed";
 /**
  * `uuid`: IDs are UUIDs, `get_expense` declares `format: "uuid"` and throws on
  * a malformed ID (ADR-007 acceptance requirement 7).
+ * `hide-b2`: `list_expenses` never returns `b2`, so no pooled input reaches it
+ * (requirement 10a: a fix must not be credited without coverage).
+ * `throw-denial`: every denial throws `ForbiddenError` instead of returning
+ * `isError` (requirement 11).
  */
-export type Variant = "default" | "uuid";
+export type Variant = "default" | "uuid" | "hide-b2" | "throw-denial";
+export const VARIANTS: readonly Variant[] = ["default", "uuid", "hide-b2", "throw-denial"];
+
+export function isVariant(value: string): value is Variant {
+  return (VARIANTS as readonly string[]).includes(value);
+}
+
+export class ForbiddenError extends Error {
+  override name = "ForbiddenError";
+  constructor() {
+    super("Forbidden");
+  }
+}
 
 export interface LedgerOptions {
   bug?: Bug;
@@ -113,6 +129,10 @@ export function startLedger(host: ToolHost, options: LedgerOptions = {}): void {
     type: "string",
     enum: enumOrder === "reversed" ? [...values].reverse() : values,
   });
+  const deny = (): ToolResult => {
+    if (variant === "throw-denial") throw new ForbiddenError();
+    return error("FORBIDDEN");
+  };
   const idProperty: Record<string, PropertySchema> = {
     id: variant === "uuid" ? { type: "string", format: "uuid" } : { type: "string" },
   };
@@ -130,7 +150,12 @@ export function startLedger(host: ToolHost, options: LedgerOptions = {}): void {
         return ok({ ok: true });
       },
     ],
-    ["list_expenses", "List expenses in the current workspace.", {}, () => ok(rows(listWorkspace))],
+    [
+      "list_expenses",
+      "List expenses in the current workspace.",
+      {},
+      () => ok(rows(listWorkspace).filter((e) => variant !== "hide-b2" || e.id !== id("b2"))),
+    ],
     [
       "get_expense",
       "Read an expense in the current workspace.",
@@ -155,7 +180,7 @@ export function startLedger(host: ToolHost, options: LedgerOptions = {}): void {
         note: { type: "string" },
       },
       (args) => {
-        if (role === "viewer") return error("FORBIDDEN");
+        if (role === "viewer") return deny();
         const item: Expense = {
           ...row(`e${nextId++}`, args["amount_cents"] as number, args["currency"] as Currency),
           note: args["note"] as string,
@@ -176,7 +201,7 @@ export function startLedger(host: ToolHost, options: LedgerOptions = {}): void {
         const wanted = args["id"] as string;
         const item = rows(workspace).find((e) => e.id === wanted);
         const viewerBypass = has("B1") && role === "viewer" && item?.status === "pending";
-        if (role !== "admin" && !viewerBypass) return error("FORBIDDEN");
+        if (role !== "admin" && !viewerBypass) return deny();
         if (!item) return error("NOT_FOUND");
         if (has("B6") && role === "admin" && item.currency === "USD") {
           throw new TypeError("Cannot approve USD expense");
@@ -193,7 +218,7 @@ export function startLedger(host: ToolHost, options: LedgerOptions = {}): void {
       "Delete an expense.",
       idProperty,
       (args) => {
-        if (role !== "admin") return error("FORBIDDEN");
+        if (role !== "admin") return deny();
         const wanted = args["id"] as string;
         const list = rows(workspace);
         const index = list.findIndex((e) => e.id === wanted);

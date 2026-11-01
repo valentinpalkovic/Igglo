@@ -2,7 +2,15 @@
 // These tests check Ledger itself, not Fram; Fram's acceptance spec is in
 // acceptance.test.ts.
 import { describe, expect, it } from "vitest";
-import { BUGS, error, expenseId, startLedger, type Bug, type EnumOrder } from "./ledger.js";
+import {
+  BUGS,
+  error,
+  expenseId,
+  ForbiddenError,
+  startLedger,
+  type Bug,
+  type EnumOrder,
+} from "./ledger.js";
 import { MemoryHost } from "./memory-host.js";
 import { optionsFromQuery } from "./page.js";
 
@@ -300,6 +308,33 @@ describe("uuid variant (acceptance requirement 7)", () => {
   });
 });
 
+describe("hide-b2 variant (acceptance requirement 10a)", () => {
+  it("never lists b2, but b2 still exists and B6 still throws on it", async () => {
+    const host = new MemoryHost();
+    startLedger(host, { bug: "B6", variant: "hide-b2" });
+    await host.callTool("sign_in", { role: "admin" });
+    await host.callTool("switch_workspace", { workspace: "beta" });
+    expect((await content(host, "list_expenses")).map((r) => r["id"])).toEqual(["b1"]);
+    await expect(host.callTool("approve_expense", { id: "b2" })).rejects.toThrow(TypeError);
+  });
+});
+
+describe("throw-denial variant (acceptance requirement 11)", () => {
+  it("throws ForbiddenError for every denial instead of returning isError", async () => {
+    const host = new MemoryHost();
+    startLedger(host, { variant: "throw-denial" });
+    await host.callTool("sign_in", { role: "viewer" });
+    for (const [tool, args] of [
+      ["create_expense", { amount_cents: 1, currency: "EUR", note: "" }],
+      ["approve_expense", { id: "a1" }],
+      ["delete_expense", { id: "a1" }],
+    ] as const) {
+      await expect(host.callTool(tool, args)).rejects.toThrow(ForbiddenError);
+    }
+    expect(await host.callTool("get_expense", { id: "zz" })).toEqual(error("NOT_FOUND"));
+  });
+});
+
 describe("page query", () => {
   it("parses bug, enum order and variant", () => {
     expect(optionsFromQuery("")).toEqual({});
@@ -315,6 +350,8 @@ describe("page query", () => {
     expect(() => optionsFromQuery("?bug=b1")).toThrow(TypeError);
     expect(() => optionsFromQuery("?enumOrder=random")).toThrow(TypeError);
     expect(() => optionsFromQuery("?variant=ulid")).toThrow(TypeError);
+    expect(optionsFromQuery("?variant=hide-b2")).toEqual({ variant: "hide-b2" });
+    expect(optionsFromQuery("?variant=throw-denial")).toEqual({ variant: "throw-denial" });
   });
 
   it("fails on a repeated key instead of picking one build", () => {

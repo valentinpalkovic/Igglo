@@ -69,7 +69,7 @@ export const EXPECTED: Record<Bug, ExpectedRow> = {
   },
 };
 
-/** Hard requirements 1–9 of ADR-007, section 10. All must hold. */
+/** Hard requirements 1–12 of ADR-007, section 10. All must hold. */
 export const REQUIREMENTS = [
   "1. clean build: 0 findings; clean vs clean: 0 changes",
   "2. declared and reversed enum order: identical finding IDs and changes; clean declared vs clean reversed: 0 new, 0 fixed, 0 changes",
@@ -80,4 +80,7 @@ export const REQUIREMENTS = [
   "7. uuid variant: schema-valid inputs only; clean build gives 0 findings",
   "8. evidence.raw false: no setup input, non-ID pooled value or raw error message in fram-run, fram-observations, job summary or stdout",
   "9. network containment: service-worker fetch, WebSocket and direct request to a blocked origin are blocked; cross-origin redirect is detected and counted; WebRTC is unavailable",
+  "10. B6 build as base: head B6 with variant hide-b2 reports B6 not-checked (call-not-made); clean head without context admin@beta reports B6 not-checked (context-missing); never fixed",
+  "11. throw-denial variant: clean build gives 0 findings, with the default denial rule and with isDenied accepting only ForbiddenError",
+  "12. baseline bootstrap: a main run of the B6 build exits 0, and the next PR run with it as base reports B6 open, not new",
 ] as const;
