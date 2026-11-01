@@ -1,0 +1,20 @@
+{
+  "name": "@iglo/fixture-ledger",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ledger: the IGL-28 test app with seeded bugs B1–B8, and Fram's acceptance spec (ADR-007, section 10).",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}
