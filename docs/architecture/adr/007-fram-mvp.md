@@ -1,6 +1,6 @@
 # ADR-007: Fram MVP: exploration, output checks, run export and stable finding IDs
 
-Status: proposed
+Status: accepted
 Date: 2026-11-01
 Owner: Architekt
 Approver: Head of Tech
@@ -370,7 +370,7 @@ No new services. Runtime dependencies of `fram-core`: `playwright-core` (ADR-004
 
 ## Security review
 
-Required before acceptance, from the Security Engineer ([IGL-81](/IGL/issues/IGL-81)). The first review asked for changes S1–S5 ([PR #8 review](https://github.com/valentinpalkovic/Igglo/pull/8#pullrequestreview-5728146214)); this revision addresses them as follows, and a re-review is pending.
+Required before acceptance, from the Security Engineer ([IGL-81](/IGL/issues/IGL-81)). The first review asked for changes S1–S5 ([PR #8 review](https://github.com/valentinpalkovic/Igglo/pull/8#pullrequestreview-5728146214)); this revision addresses them as follows. The re-review ([IGL-90](/IGL/issues/IGL-90), [PR #8 re-review](https://github.com/valentinpalkovic/Igglo/pull/8#pullrequestreview-5728240406), against `73605ad`) approved them. Its non-blocking recommendations R1–R8 (all low: a DNS-level backstop for redirects via Chromium `--host-resolver-rules`, narrower purpose wording, references for credential-like `*Id` names, observation keys and `changes[].read.input`, a `configHash` mismatch warning, size caps on uncompressed bytes, backtick-safe summary escaping, and a parsed-hostname localhost check) are tracked in [IGL-49](/IGL/issues/IGL-49) and change no decision here.
 - **Auth (S3):** contexts log in as test users. The MVP allows no secrets (consistent with ADR-006). Setup inputs never reach the export, summary or logs, `storageState` contents are never copied, and test users of a deployed preview are dedicated, low-privilege, limited to that preview and treated as public (sections 1, 6, 7).
 - **Customer data (S1, S2, S3):** "test data only" is a policy, not a control; Fram cannot enforce it. The controls: observations hold only hashes by default; raw outputs and messages are opt-in with a public-repo warning; pooled values other than IDs are written as references; error messages appear only as normalized signatures; logs carry no app data; retention is 14 days for observations and 30 for the export (sections 5, 6, 8).
 - **Baseline integrity (S4):** baseline runs are filtered by event, default branch, same repository, workflow and conclusion, and validated before use (section 5).
